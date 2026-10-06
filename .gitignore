@@ -58,4 +58,3 @@ gemma4-agent/data/_meta/*.log
 gemma4-agent/notebooks/p26_smoke/agent_ds/
 gemma4-agent/notebooks/p26_smoke/agent_ds_v2/
 gemma4-agent/notebooks/_pull/
-gemma4-agent/wheels_harness/

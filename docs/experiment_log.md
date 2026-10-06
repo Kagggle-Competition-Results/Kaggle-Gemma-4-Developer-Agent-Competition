@@ -63,7 +63,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | S3_BACKUP | **done enough** | cursor-exec | model + full data + tools on S3 |
 | P1.1–P1.6 | **done** | cursor-exec | GATE_P1 PASS |
 | P2.1–P2.5 | **done** | cursor-exec | agent.yaml + skills + zip |
-| **P2.6** | **claimed / running** | cursor-exec | Kaggle L4 smoke; v1 ERROR (agent path); v2 QUEUED |
+| **P2.6** | **claimed / queued** | cursor-exec | Kaggle NvidiaL4 smoke v3; sampling aligned; wheelhouse mirrored |
 | P2.7 | pending | — | first Kaggle submit after GATE_P2 |
 | Phase 3+ | blocked | — | needs `GATE_P2` |
 
@@ -131,3 +131,8 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-06T19:43:18Z | claim | P2.6 | agent=cursor-exec | hash=none | metrics=provider=kaggle,kernel=moranzavdi/gemma4-p26-smoke-swegemma,machine=nvidia_l4x4,internet=0 | next=smoke_results | blocker=none
 2026-10-06T19:52:12Z | note | P2.6 | agent=cursor-exec | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,version=2,machine_shape=NvidiaL4,status=QUEUED,v1_error=agent_path_missing,wheelhouse=metric/gemma-4-developer-agent-wheelhouse,swegemma=0.2.7,adk_submission=0.2.12 | next=GATE_P2 | blocker=wait_L4_queue
 2026-10-06T19:52:12Z | note | HANDOFF | agent=cursor-exec | hash=none | metrics=stand=GATE_P1_PASS_P26_Kaggle_QUEUED,runpod=terminated,ec2=terminated,harness_pkgs=kaggle_wheelhouse_not_pypi | next=monitor_kernel_then_GATE_P2 | blocker=none
+2026-10-06T19:54:10Z | done | P2.3_sampling | agent=cursor-exec | hash=none | metrics=top_p=0.95,max_out=16384,thinking_budget=4096,include_thoughts=1,aligned=official_starter | next=P2.6 | blocker=none
+2026-10-06T19:54:10Z | done | P2.5_zip_dryrun | agent=cursor-exec | hash=abb34b9643e7bf8f | metrics=unpacked_bytes=3029,files=8,sha256=abb34b9643e7bf8f774102da4ff566d47007ba413b630fca19189159b15ba032 | next=P2.7 | blocker=wait_GATE_P2
+2026-10-06T19:54:10Z | note | P2.6_tools | agent=cursor-exec | hash=none | metrics=pull_kaggle_smoke=1,classify_failures=1,wheels_harness=s3://gemma4-dev-agent-data-650825122703/tools/wheels_harness,swegemma=0.2.7 | next=P2.6 | blocker=none
+2026-10-06T19:54:10Z | note | P3.1_draft | agent=cursor-exec | hash=none | metrics=budget_grid=configs/budget_grid.yaml,run=blocked_until_GATE_P2 | next=GATE_P2 | blocker=none
+2026-10-06T19:54:10Z | note | P2.6 | agent=cursor-exec | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,version=3,sampling_aligned=1 | next=GATE_P2 | blocker=wait_L4_queue
