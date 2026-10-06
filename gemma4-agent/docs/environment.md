@@ -10,6 +10,14 @@
 
 Local CLI (after install from competition packages / wheel index when available):
 
+**Harness wheelhouse (authoritative for local/Kaggle):** Kaggle dataset
+`metric/gemma-4-developer-agent-wheelhouse` — includes `swegemma-0.2.7`, `adk_submission-0.2.12`,
+`adk_eval_core-0.1.0`, `google_adk-…`. **Not on public PyPI.** Official starter notebook:
+`ryanholbrook/getting-started-gemma-4-developer-agent` (`machine_shape: NvidiaL4`).
+
+**P2.6 smoke kernel:** `moranzavdi/gemma4-p26-smoke-swegemma` (repo: `gemma4-agent/notebooks/p26_smoke/kernel/`).
+
+
 ```bash
 swegemma eval \
   --tasks tasks.jsonl \

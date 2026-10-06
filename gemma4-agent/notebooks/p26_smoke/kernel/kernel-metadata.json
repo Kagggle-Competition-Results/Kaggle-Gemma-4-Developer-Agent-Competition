@@ -1,0 +1,23 @@
+{
+  "id": "moranzavdi/gemma4-p26-smoke-swegemma",
+  "title": "gemma4-p26-smoke-swegemma",
+  "code_file": "p26-smoke-swegemma.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": false,
+  "keywords": ["gpu"],
+  "dataset_sources": [
+    "moranzavdi/gemma4-p26-agent-smoke",
+    "metric/gemma-4-developer-agent-wheelhouse"
+  ],
+  "competition_sources": [
+    "gemma-4-developer-agent"
+  ],
+  "model_sources": [
+    "google/gemma-4/Other/gemma-4-31b-it-qat-w4a16-ct/2"
+  ],
+  "machine_shape": "NvidiaL4"
+}

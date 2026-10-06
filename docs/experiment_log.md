@@ -29,14 +29,29 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 ```text
 # GATE_P0 = PASS (task_integrity+split+serve_parity+distill; measured 2026-10-06)
 # GATE_P1 = PASS (usable=111,oracle_tpr=1.0,empty_fpr=0.0; overhead_s=35.5 pin_deps offline >5s accepted)
-# GATE_P2 = (pending)
+# GATE_P2 = (pending) — waiting P2.6 smoke Pass@1 on Kaggle L4
 # GATE_P3 = (pending)
 # GATE_P4 = (pending)
 # GATE_TRAIN_SHIP = (pending)
 # GATE_P6 = (pending)
-# CLOUD_APPROVAL = YES (P1.1 AWS c7i.2xlarge ondemand fallback; Spot capacity/quota exhausted; ami-0794230e150561868; i-04ba0dd1452eb7751)
-# S3_BACKUP = model mirrored; competition data sync may still finish
+# CLOUD_APPROVAL = YES (P2.6 Kaggle NvidiaL4 notebook; RunPod pod df22nlzu9o5idd TERMINATED)
+# S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
 ```
+
+### Status board (read this first)
+
+| Area | State | Where |
+| --- | --- | --- |
+| Phase 0–1 | **DONE** / `GATE_P1=PASS` | usable 111/129; quarantine 18 in `configs/splits.json` |
+| Harness verify | **2026-10-06.5** | `gemma4-agent/docs/harness_verify.md` + `sandbox/` |
+| Soundness CSV | on S3 | `s3://…/results/soundness.csv` |
+| CPU EC2 P1.1 | **terminated** | `i-04ba0dd1452eb7751` |
+| RunPod P2.6 serve | **terminated** | A6000 serve_pass=1 then tore down (no public PyPI harness) |
+| Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` (`swegemma-0.2.7`, `adk_submission-0.2.12`, …) |
+| **P2.6 smoke** | **IN PROGRESS** | kernel `moranzavdi/gemma4-p26-smoke-swegemma` v2 — `QUEUED` for NvidiaL4 |
+| Next after smoke | `GATE_P2` if Pass@1≥10–15% + 0 hard crashes; else fix agent | then P2.7 / Phase 3 |
+
+**Do not:** spin RunPod for smoke (use Kaggle); install all `/wheels`; peek holdout; start cloud without `CLOUD_APPROVAL`.
 
 ---
 
@@ -44,23 +59,13 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 
 | Ticket | Status | Claimed by | Notes |
 | --- | --- | --- | --- |
-| P0.1 | **done** | human | Rules accepted (`userHasEntered=true`) |
-| P0.2 | **done** | cursor-exec | Updated from HARNESS_README (eval_config `evaluation:` keys, skills layout) |
-| P0.3 | **done** | cursor-exec | Full 20.42 GiB unzipped to `data/_full` (524/524) |
-| P0.4 | **done** | cursor-exec | Full inventory: 129/127/127; 0 zero-byte; join 129/129; `task_integrity=1` |
-| S3_BACKUP | **in progress** | cursor-exec | Background sync to `gemma4-dev-agent-data-650825122703` |
-| P0.5 | **done** | cursor-exec | splits v2 from tasks.jsonl; 0% overlap |
-| P0.6 | **done** | cursor-exec | A6000 48GB: load 65.33s, gen 1000 tok, pass=1 |
-| P0.7 | **done** | cursor-exec | distillation_policy BLOCK proprietary |
-| P0.8 | **done** | cursor-exec | Workbench notes in environment.md |
-| P0.9 | **done** | cursor-bootstrap | Board seeded |
-| P1.1 | **done** | cursor-exec | harness 2026-10-06.5; usable=111/129 (86%) |
-| P1.2 | **done** | cursor-exec | quarantine=18; splits smoke10/dev35/holdout31/train35 |
-| P1.3 | **done** | cursor-exec | HOST_TOOLS×9; g11_ok; harness_ready |
-| P1.4 | **done** | cursor-exec | submit_patch in runner tool list; scratch rejected via skills |
-| P1.5 | **done** | cursor-exec | traces/_schema.md + manual traj |
-| P1.6 | **done** | cursor-exec | skills load check via run_local_eval |
-| P2.1–P2.5 | **done** | cursor-exec | Host-aligned agent.yaml + skills/*/SKILL.md; zip rebuilt |
+| P0.1–P0.9 | **done** | — | GATE_P0 closed |
+| S3_BACKUP | **done enough** | cursor-exec | model + full data + tools on S3 |
+| P1.1–P1.6 | **done** | cursor-exec | GATE_P1 PASS |
+| P2.1–P2.5 | **done** | cursor-exec | agent.yaml + skills + zip |
+| **P2.6** | **claimed / running** | cursor-exec | Kaggle L4 smoke; v1 ERROR (agent path); v2 QUEUED |
+| P2.7 | pending | — | first Kaggle submit after GATE_P2 |
+| Phase 3+ | blocked | — | needs `GATE_P2` |
 
 ---
 
@@ -119,3 +124,10 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-06T17:31:55Z | done | P1.6 | agent=cursor-exec | hash=none | metrics=skills_loaded=4,g11_ok=1 | next=GATE_P1 | blocker=none
 2026-10-06T17:31:55Z | gate | GATE_P1 | agent=cursor-exec | hash=f351033048f0ee51 | metrics=usable=111,oracle_tpr=1.0,empty_fpr=0.0,overhead_s=35.5,overhead_note=pin_deps_offline | next=P2 | blocker=none
 2026-10-06T17:48:30Z | done | P1.1_teardown | agent=cursor-exec | hash=none | metrics=instance=i-04ba0dd1452eb7751,action=terminate,reason=GATE_P1_done_csv_on_s3 | next=P2.6 | blocker=none
+2026-10-06T18:01:12Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=40,provider=runpod,purpose=P2.6,sku=B300_MIG_34GB,price_hint_usd_per_hr=0.50,expires=2026-10-07T23:59:59Z | next=P2.6 | blocker=none
+2026-10-06T18:01:12Z | claim | P2.6 | agent=cursor-exec | hash=none | metrics=sku=B300_MIG_34GB | next= | blocker=none
+2026-10-06T18:27:41Z | note | P2.6 | agent=cursor-exec | hash=none | metrics=pod=df22nlzu9o5idd,sku=RTX_A6000_48GB,cost_per_hr=0.53,vllm=0.31.0,serve_pass=1,gen_tokens=1000,gen_s=31.8,b300_mig=SUPPLY_CONSTRAINT | next=smoke_eval | blocker=need_swegemma_adk_packages_not_on_pypi
+2026-10-06T19:41:46Z | done | P2.6_teardown | agent=cursor-exec | hash=none | metrics=pod=df22nlzu9o5idd,action=terminate,reason=move_smoke_to_kaggle | next=P2.6_kaggle | blocker=need_kaggle_notebook_auth
+2026-10-06T19:43:18Z | claim | P2.6 | agent=cursor-exec | hash=none | metrics=provider=kaggle,kernel=moranzavdi/gemma4-p26-smoke-swegemma,machine=nvidia_l4x4,internet=0 | next=smoke_results | blocker=none
+2026-10-06T19:52:12Z | note | P2.6 | agent=cursor-exec | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,version=2,machine_shape=NvidiaL4,status=QUEUED,v1_error=agent_path_missing,wheelhouse=metric/gemma-4-developer-agent-wheelhouse,swegemma=0.2.7,adk_submission=0.2.12 | next=GATE_P2 | blocker=wait_L4_queue
+2026-10-06T19:52:12Z | note | HANDOFF | agent=cursor-exec | hash=none | metrics=stand=GATE_P1_PASS_P26_Kaggle_QUEUED,runpod=terminated,ec2=terminated,harness_pkgs=kaggle_wheelhouse_not_pypi | next=monitor_kernel_then_GATE_P2 | blocker=none
