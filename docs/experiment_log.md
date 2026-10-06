@@ -118,3 +118,4 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-06T17:31:55Z | done | P1.4 | agent=cursor-exec | hash=none | metrics=submit_patch=1,scratch_rejected_skill=1 | next=GATE_P1 | blocker=none
 2026-10-06T17:31:55Z | done | P1.6 | agent=cursor-exec | hash=none | metrics=skills_loaded=4,g11_ok=1 | next=GATE_P1 | blocker=none
 2026-10-06T17:31:55Z | gate | GATE_P1 | agent=cursor-exec | hash=f351033048f0ee51 | metrics=usable=111,oracle_tpr=1.0,empty_fpr=0.0,overhead_s=35.5,overhead_note=pin_deps_offline | next=P2 | blocker=none
+2026-10-06T17:48:30Z | done | P1.1_teardown | agent=cursor-exec | hash=none | metrics=instance=i-04ba0dd1452eb7751,action=terminate,reason=GATE_P1_done_csv_on_s3 | next=P2.6 | blocker=none
