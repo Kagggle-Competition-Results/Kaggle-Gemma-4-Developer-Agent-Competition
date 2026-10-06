@@ -33,7 +33,7 @@ IMAGE = os.environ.get("SOUNDNESS_IMAGE", "gemma4-sandbox:base")
 # Competition wheels are manylinux x86_64; force amd64 on Apple Silicon.
 DOCKER_PLATFORM = os.environ.get("SOUNDNESS_DOCKER_PLATFORM", "linux/amd64")
 # Keep in sync with docs/harness_verify.md + sandbox/ extras.
-HARNESS_VERIFY_DOC_VERSION = "2026-10-06.3"
+HARNESS_VERIFY_DOC_VERSION = "2026-10-06.5"
 _SANDBOX_DIR = Path(__file__).resolve().parent.parent / "sandbox"
 
 
@@ -210,6 +210,14 @@ def build_image_if_needed(data: Path, *, force: bool = False) -> str:
                     ),
                     (
                         "&& pip install --no-cache-dir pytest pytest-timeout==2.1.0 typer "
+                        "pdm-backend setuptools wheel poetry-core hatchling flit-core editables"
+                    ),
+                    (
+                        '&& pip install --no-cache-dir "pytest>=8.3.4" pytest-timeout==2.1.0 typer '
+                        "pdm-backend setuptools wheel poetry-core hatchling flit-core editables \\"
+                    ),
+                    (
+                        '&& pip install --no-cache-dir "pytest>=8.3.4" pytest-timeout==2.1.0 typer '
                         "pdm-backend setuptools wheel poetry-core hatchling flit-core editables"
                     ),
                 ]

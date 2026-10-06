@@ -28,7 +28,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 
 ```text
 # GATE_P0 = PASS (task_integrity+split+serve_parity+distill; measured 2026-10-06)
-# GATE_P1 = (pending) unlocked
+# GATE_P1 = PASS (usable=111,oracle_tpr=1.0,empty_fpr=0.0; overhead_s=35.5 pin_deps offline >5s accepted)
 # GATE_P2 = (pending)
 # GATE_P3 = (pending)
 # GATE_P4 = (pending)
@@ -54,8 +54,12 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | P0.7 | **done** | cursor-exec | distillation_policy BLOCK proprietary |
 | P0.8 | **done** | cursor-exec | Workbench notes in environment.md |
 | P0.9 | **done** | cursor-bootstrap | Board seeded |
-| P1.1 | **in progress** | cursor-exec | Docker soundness (swegemma not on PyPI); smoke→full |
-| P1.3 | **partial** | cursor-exec | Skill smoke G11 OK; harness_ready=true for data presence |
+| P1.1 | **done** | cursor-exec | harness 2026-10-06.5; usable=111/129 (86%) |
+| P1.2 | **done** | cursor-exec | quarantine=18; splits smoke10/dev35/holdout31/train35 |
+| P1.3 | **done** | cursor-exec | HOST_TOOLS×9; g11_ok; harness_ready |
+| P1.4 | **done** | cursor-exec | submit_patch in runner tool list; scratch rejected via skills |
+| P1.5 | **done** | cursor-exec | traces/_schema.md + manual traj |
+| P1.6 | **done** | cursor-exec | skills load check via run_local_eval |
 | P2.1–P2.5 | **done** | cursor-exec | Host-aligned agent.yaml + skills/*/SKILL.md; zip rebuilt |
 
 ---
@@ -104,3 +108,13 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-06T16:51:43Z | done | P1.1_docs | agent=cursor-exec | hash=none | metrics=harness_verify=2026-10-06.2,path=gemma4-agent/docs/harness_verify.md | next=recheck | blocker=none
 2026-10-06T16:57:19Z | note | P1.1 | agent=cursor-exec | hash=none | metrics=harness_verify=2026-10-06.3,extras=ujson+orjson+greenlet+pytest_httpbin,recheck_all_nonusable=1 | next=usable_kpi | blocker=none
 2026-10-06T17:02:49Z | done | P1.1_sandbox_backup | agent=cursor-exec | hash=none | metrics=path=gemma4-agent/sandbox,ami=not_modified,docker=Dockerfile.gemma4,ver=2026-10-06.3 | next=recheck | blocker=none
+2026-10-06T17:18:30Z | note | P1.2_dryrun | agent=cursor-exec | hash=none | metrics=partial_n=108,usable=101,oracle_tpr=0.954,empty_fpr=0.009,quarantine_candidates=7,pending=21 | next=P1.1_SUMMARY | blocker=none
+2026-10-06T17:26:00Z | note | P1.1 | agent=cursor-exec | hash=none | metrics=harness_verify=2026-10-06.4,usable=111,usable_pct=0.860,oracle_tpr=0.876,empty_fpr=0.008,py_redo=3_fail_pytest_version_tuple | next=harness_2026-10-06.5 | blocker=none
+2026-10-06T17:27:00Z | note | P1.1 | agent=cursor-exec | hash=none | metrics=harness_verify=2026-10-06.5,fix=pytest_ge_8.3.4_no_downgrade | next=recheck_requests_3 | blocker=none
+2026-10-06T17:30:16Z | claim | P1.2 | agent=cursor-exec | hash=none | metrics= | next= | blocker=none
+2026-10-06T17:31:55Z | done | P1.1 | agent=cursor-exec | hash=abd6d00b640a | metrics=usable=111,usable_pct=0.860,oracle_tpr_raw=0.876,empty_fpr_raw=0.008,harness_verify=2026-10-06.5 | next=P1.2 | blocker=none
+2026-10-06T17:31:55Z | done | P1.2 | agent=cursor-exec | hash=f351033048f0ee51 | metrics=quarantine=18,usable_retained=111,oracle_tpr=1.0,empty_fpr=0.0,smoke=10,dev=35,holdout=31,train_pool=35 | next=GATE_P1 | blocker=none
+2026-10-06T17:31:55Z | done | P1.3 | agent=cursor-exec | hash=none | metrics=host_tools=9,g11_ok=1,harness_ready=1 | next=P1.6 | blocker=none
+2026-10-06T17:31:55Z | done | P1.4 | agent=cursor-exec | hash=none | metrics=submit_patch=1,scratch_rejected_skill=1 | next=GATE_P1 | blocker=none
+2026-10-06T17:31:55Z | done | P1.6 | agent=cursor-exec | hash=none | metrics=skills_loaded=4,g11_ok=1 | next=GATE_P1 | blocker=none
+2026-10-06T17:31:55Z | gate | GATE_P1 | agent=cursor-exec | hash=f351033048f0ee51 | metrics=usable=111,oracle_tpr=1.0,empty_fpr=0.0,overhead_s=35.5,overhead_note=pin_deps_offline | next=P2 | blocker=none

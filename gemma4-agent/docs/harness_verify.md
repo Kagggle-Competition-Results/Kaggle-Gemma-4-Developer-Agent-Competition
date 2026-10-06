@@ -1,6 +1,6 @@
 # Harness verify notes (P1.1 soundness)
 
-**Version:** `2026-10-06.3`  
+**Version:** `2026-10-06.4`  
 **Owner ticket:** P1.1 → P1.2  
 **Code:** `gemma4-agent/scripts/soundness_check.py`, `gemma4-agent/scripts/apply_quarantine.py`  
 **Repo backup (image + pin):** `gemma4-agent/sandbox/` (`Dockerfile.gemma4`, `extras.txt`, `pin_deps.py`)  
@@ -70,6 +70,8 @@ Baked into `gemma4-sandbox:base` at build (not all exist in competition wheels):
 | `ujson` / `orjson` | FastAPI UJSONResponse / ORJSONResponse tests |
 | `greenlet` | sqlalchemy (not in `/wheels`; blocks sqlmodel install) |
 | `pytest-httpbin` | requests oracle suite (194 errors without it) |
+| `py` | legacy pytest assertion rewrite (`import py`) on some requests tasks |
+| `pytest>=8.3.4` | image pin; pin_deps skips downgrade (`version_tuple` for `executing`) |
 
 Rebuild after changing the tuple:
 
@@ -134,6 +136,7 @@ Spot userdata / rerun pattern: sync data → `aws s3 cp` tools script → run wi
 | `httpx` / `h11` missing | Transitive pin too new for wheel set | `--no-deps` fallback + EXTRA list |
 | `empty_unexpected_pass` | Tests don’t catch bug | Quarantine |
 | Oracle assert after green env | Real task / gold issue | Quarantine or inspect patch |
+| `pytest has no attribute 'version_tuple'` | Task wheel downgraded pytest; `executing` needs ≥8.3.4 | Image `pytest>=8.3.4` + pin_deps skip pytest |
 
 ---
 
@@ -144,3 +147,5 @@ Spot userdata / rerun pattern: sync data → `aws s3 cp` tools script → run wi
 | `2026-10-06.1` | 2026-10-06 | S3 `--resume` / per-task CSV sync; typing_inspection in image |
 | `2026-10-06.2` | 2026-10-06 | Constraint-aware pin_deps; drop all-wheels preseed; multipart/email-validator/attrs extras; apply_quarantine.py |
 | `2026-10-06.3` | 2026-10-06 | Image extras: ujson, orjson, greenlet, pytest-httpbin; pin EXTRA += sqlalchemy/sqlmodel |
+| `2026-10-06.4` | 2026-10-06 | Image extra: `py` (requests ModuleNotFoundError in pytest assertion rewrite) |
+| `2026-10-06.5` | 2026-10-06 | Pin `pytest>=8.3.4`; pin_deps never downgrades pytest (`version_tuple` / executing) |

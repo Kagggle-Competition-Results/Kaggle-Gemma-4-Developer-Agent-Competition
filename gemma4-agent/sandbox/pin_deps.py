@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Constraint-aware offline wheel install for soundness verify.
 
-Version: 2026-10-06.3 — see docs/harness_verify.md
+Version: 2026-10-06.5 — see docs/harness_verify.md
 
 Mounted into the sandbox as /tmp/pin_deps.py by soundness_check.run_verify.
 Do NOT install every /wheels/*.whl (newest starlette breaks FastAPI).
+Never downgrade image pytest (<8.3.4 lacks version_tuple; breaks executing).
 """
 from __future__ import annotations
 
@@ -20,6 +21,9 @@ except ImportError:
 
 wheels = Path("/wheels")
 reqs: list[str] = []
+
+# Keep image pytest — task wheels often ship older pytest without version_tuple.
+_SKIP_PIN = frozenset({"pytest"})
 
 
 def add_req(s: str) -> None:
@@ -58,6 +62,9 @@ uniq: list[str] = []
 for r in reqs:
     key = re.split(r"[=<>!~\[]", r, maxsplit=1)[0].strip().lower()
     if key in seen:
+        continue
+    if key in _SKIP_PIN:
+        print(f"pin_skip {key} (keep image)", flush=True)
         continue
     seen.add(key)
     uniq.append(r)
