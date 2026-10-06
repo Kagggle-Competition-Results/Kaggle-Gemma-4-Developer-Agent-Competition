@@ -1,0 +1,55 @@
+# Data, caches, secrets
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+
+# Large / local-only
+gemma4-agent/data/**
+!gemma4-agent/data/.gitkeep
+!gemma4-agent/data/_meta/
+!gemma4-agent/data/_meta/**
+gemma4-agent/traces/**
+!gemma4-agent/traces/.gitkeep
+!gemma4-agent/traces/_schema.md
+!gemma4-agent/traces/manual/
+!gemma4-agent/traces/manual/**
+gemma4-agent/synth/**
+!gemma4-agent/synth/.gitkeep
+gemma4-agent/prefs/**
+!gemma4-agent/prefs/.gitkeep
+gemma4-agent/results/**
+!gemma4-agent/results/.gitkeep
+
+# Artifacts
+*.zip
+submission.zip
+*.pt
+*.bin
+*.safetensors
+gemma4-agent/agent/adapters/**
+!gemma4-agent/agent/adapters/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE (never pack into agent/)
+.idea/
+.vscode/
+.cursor/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime noise under data/_meta
+gemma4-agent/data/_meta/*.pid
+gemma4-agent/data/_meta/*.log

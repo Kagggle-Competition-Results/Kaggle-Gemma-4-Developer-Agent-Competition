@@ -1,0 +1,19 @@
+name: repository_fixer
+model: gemma-4-31b-it-qat-w4a16-ct
+instruction: !include prompts/system.md
+skills:
+  - skills/debug_workflow
+  - skills/patch_rules
+  - skills/anti_loop
+  - skills/nav_rules
+tools:
+  - run_command
+  - read_file
+  - edit_file
+  - write_file
+  - get_status
+  - submit_patch
+  - get_code_neighbors
+  - get_code_subgraph
+  - search_similar_code
+generate_content_config: !include configs/sampling.yaml

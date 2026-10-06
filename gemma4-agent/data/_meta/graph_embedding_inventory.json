@@ -1,0 +1,7 @@
+{
+  "n_tasks": 129,
+  "graph_embed_ok": 129,
+  "missing_graphs": [],
+  "missing_embeddings": [],
+  "join": "instance_id + base_commit \u2192 graphs/<repo>_<commit>.json / embeddings/<repo>_<commit>.npz"
+}

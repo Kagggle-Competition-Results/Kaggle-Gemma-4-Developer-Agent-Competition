@@ -1,0 +1,9 @@
+{
+  "tasks_jsonl_present": true,
+  "n_snapshots": 129,
+  "n_graphs": 127,
+  "n_embeddings": 127,
+  "zero_byte_files": [],
+  "integrity_ok": true,
+  "note": "Graph/embed stems use commit hashes; join via tasks.jsonl."
+}

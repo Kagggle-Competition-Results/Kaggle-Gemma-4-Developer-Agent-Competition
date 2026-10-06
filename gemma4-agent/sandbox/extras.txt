@@ -1,0 +1,13 @@
+# Sandbox image extras — packages NOT reliably present in competition /wheels
+# Consumed by scripts/soundness_check.py (SANDBOX_EXTRA_PIP) and Dockerfile.gemma4.
+# Version: 2026-10-06.3 — keep in sync with docs/harness_verify.md
+typing_inspection
+inline_snapshot
+dirty_equals
+attrs
+python-multipart
+email-validator
+ujson
+orjson
+greenlet
+pytest-httpbin

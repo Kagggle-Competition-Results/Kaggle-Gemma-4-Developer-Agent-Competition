@@ -1,0 +1,41 @@
+# gemma4-sandbox:base — versioned backup of our soundness image recipe
+# Version: 2026-10-06.3
+#
+# WHERE FIXES LIVE (read this):
+#   - NOT the AWS AMI (ami-0794230e150561868 is only CPU host: docker/awscli).
+#   - YES this Dockerfile + extras.txt + pin_deps.py, built into Docker image
+#     `gemma4-sandbox:base` on each worker.
+#
+# Build context = competition `data/*/docker/` (imp.py, telnetlib.py) OR copy those
+# files next to this Dockerfile. Prefer:
+#   python scripts/soundness_check.py --data data/_full --rebuild-image ...
+# which uses this file when present, else patches competition Dockerfile.sandbox.
+#
+# Network required once at build time for extras.txt packages (not in /wheels).
+
+FROM python:3.13-slim
+
+RUN apt-get update -qq \
+    && apt-get install -y -qq --no-install-recommends git patch protobuf-compiler pigz \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir \
+        pytest pytest-timeout==2.1.0 typer pdm-backend setuptools wheel \
+        poetry-core hatchling flit-core editables \
+        typing_inspection inline_snapshot dirty_equals attrs \
+        python-multipart email-validator ujson orjson greenlet pytest-httpbin \
+    && mkdir -p /wheels
+
+# Competition shims (must exist in build context — from data/*/docker/)
+COPY imp.py /usr/local/lib/python3.13/site-packages/imp.py
+COPY telnetlib.py /usr/local/lib/python3.13/site-packages/telnetlib.py
+
+RUN git config --global user.email "agent@eval" \
+    && git config --global user.name "Agent" \
+    && git config --global init.defaultBranch main
+
+ENV TEST_TMPDIR=/tmp
+WORKDIR /workspace
+
+# Runtime: pin_deps.py is mounted by soundness_check (do not bake task wheels here).
+LABEL org.gemma4.harness_verify="2026-10-06.3" \
+      org.gemma4.note="Constraint pin at verify time; never pip-install all /wheels"

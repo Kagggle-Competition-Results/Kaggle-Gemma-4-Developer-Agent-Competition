@@ -1,0 +1,15 @@
+{"ts": 0.0, "type": "tool_call", "tool": "get_status", "args": {}}
+{"ts": 0.1, "type": "tool_result", "tool": "get_status", "ok": true, "chars": 120, "truncated": false}
+{"ts": 0.2, "type": "tool_call", "tool": "search_similar_code", "args": {"query": "render indent guides syntax", "top_k": 3}}
+{"ts": 0.5, "type": "tool_result", "tool": "search_similar_code", "ok": true, "chars": 400, "truncated": false}
+{"ts": 0.6, "type": "tool_call", "tool": "read_file", "args": {"filepath": "rich/syntax.py", "start_line": 1, "end_line": 80}}
+{"ts": 0.9, "type": "tool_result", "tool": "read_file", "ok": true, "chars": 2400, "truncated": false}
+{"ts": 1.0, "type": "tool_call", "tool": "run_command", "args": {"command": "pytest tests/test_syntax.py -q --tb=line"}}
+{"ts": 8.0, "type": "tool_result", "tool": "run_command", "ok": false, "chars": 800, "truncated": true}
+{"ts": 8.1, "type": "tool_call", "tool": "edit_file", "args": {"filepath": "rich/syntax.py", "old": "indent_guides=False", "new": "indent_guides=True"}}
+{"ts": 8.3, "type": "tool_result", "tool": "edit_file", "ok": true, "chars": 40, "truncated": false}
+{"ts": 8.4, "type": "tool_call", "tool": "run_command", "args": {"command": "pytest tests/test_syntax.py -q --tb=line"}}
+{"ts": 15.0, "type": "tool_result", "tool": "run_command", "ok": true, "chars": 120, "truncated": false}
+{"ts": 15.1, "type": "tool_call", "tool": "submit_patch", "args": {}}
+{"ts": 15.2, "type": "tool_result", "tool": "submit_patch", "ok": true, "chars": 80, "truncated": false}
+{"ts": 15.3, "type": "result", "task_id": "rich_3905", "resolved": true, "seconds": 15.3, "tool_counts": {"get_status": 1, "search_similar_code": 1, "read_file": 1, "run_command": 2, "edit_file": 1, "submit_patch": 1}, "patch_sha256": "manual_placeholder", "error": null, "failure_tags": [], "peak_prompt_tokens": 4200}

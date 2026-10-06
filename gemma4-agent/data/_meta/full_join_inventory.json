@@ -1,0 +1,14 @@
+{
+  "n_tasks_parsed": 129,
+  "required_keys_missing": 0,
+  "missing_snapshots": 0,
+  "missing_graphs_join": 0,
+  "missing_embeddings_join": 0,
+  "unique_commits": 127,
+  "commits_shared_by_gt1": 2,
+  "corrupt_snap_headers": 0,
+  "sample_missing_snap": [],
+  "sample_missing_g": [],
+  "sample_corrupt": [],
+  "task_integrity_100pct": true
+}

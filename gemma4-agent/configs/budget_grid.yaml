@@ -1,0 +1,6 @@
+grids:
+  - {time_limit_sec: 180, max_tool_calls: 40}
+  - {time_limit_sec: 300, max_tool_calls: 60}
+  - {time_limit_sec: 360, max_tool_calls: 80}
+  - {time_limit_sec: 480, max_tool_calls: 100}
+selection_rule: max resolve_rate on dev subject to extrapolated_hours_120 <= 10.0

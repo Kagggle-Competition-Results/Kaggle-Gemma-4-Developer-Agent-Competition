@@ -1,0 +1,6 @@
+# Host schema from HARNESS_README §7.1 / sample_submission
+evaluation:
+  timeout_seconds: 300
+  max_tool_calls: 60
+  max_time_minutes: 5
+  max_turns: 80
