@@ -29,12 +29,12 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 ```text
 # GATE_P0 = PASS (task_integrity+split+serve_parity+distill; measured 2026-10-06)
 # GATE_P1 = PASS (usable=111,oracle_tpr=1.0,empty_fpr=0.0; overhead_s=35.5 pin_deps offline >5s accepted)
-# GATE_P2 = (pending) — waiting P2.6 smoke Pass@1 on Kaggle L4
-# GATE_P3 = (pending)
-# GATE_P4 = (pending)
-# GATE_TRAIN_SHIP = (pending)
+# GATE_P2 = PASS (2026-10-06; smoke Pass@1=0.20 kernel v12; zip b92db00d…)
+# GATE_P3 = FAIL (2026-10-07; failed_edit/loops; see results/gate_p3_review.json) — no P4/P5
+# GATE_P4 = (blocked by GATE_P3 FAIL)
+# GATE_TRAIN_SHIP = (blocked by GATE_P3 FAIL)
 # GATE_P6 = (pending)
-# CLOUD_APPROVAL = YES (P2.6 Kaggle NvidiaL4 notebook; RunPod pod df22nlzu9o5idd TERMINATED)
+# CLOUD_APPROVAL = expired/idle — no live RunPod/EC2 (last P3.1 pods terminated)
 # S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
 ```
 
@@ -43,15 +43,19 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Area | State | Where |
 | --- | --- | --- |
 | Phase 0–1 | **DONE** / `GATE_P1=PASS` | usable 111/129; quarantine 18 in `configs/splits.json` |
+| Phase 2 | **DONE** / `GATE_P2=PASS` | smoke 0.20; P2.7 zip submitted |
+| Phase 3 | **IN PROGRESS** / `GATE_P3=FAIL` | kept Pass@1=0.20; edit/loop KPIs fail |
 | Harness verify | **2026-10-06.5** | `gemma4-agent/docs/harness_verify.md` + `sandbox/` |
 | Soundness CSV | on S3 | `s3://…/results/soundness.csv` |
-| CPU EC2 P1.1 | **terminated** | `i-04ba0dd1452eb7751` |
-| RunPod P2.6 serve | **terminated** | A6000 serve_pass=1 then tore down (no public PyPI harness) |
-| Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` (`swegemma-0.2.7`, `adk_submission-0.2.12`, …) |
-| **P2.6 smoke** | **IN PROGRESS** | kernel `moranzavdi/gemma4-p26-smoke-swegemma` v2 — `QUEUED` for NvidiaL4 |
-| Next after smoke | `GATE_P2` if Pass@1≥10–15% + 0 hard crashes; else fix agent | then P2.7 / Phase 3 |
+| RunPod / EC2 | **terminated** | prefer Kaggle L4 for smoke |
+| Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` |
+| Smoke kernel | **v19 RUNNING** (P3.2b) | `moranzavdi/gemma4-p26-smoke-swegemma` |
+| Official submit P2.7 | **PENDING** (~12h+) | ref see competitions UI; sha `b92db00d…` |
+| Paper notes | **seeded** | [`docs/paper-notes.md`](./paper-notes.md) |
+| **Kept stack** | baseline budgets + P3.2/P3.3 + graph-first + temp 0.0 + P3.2b edit caps | `gemma4-agent/agent/` |
+| Next | pull P3.2b; cut wall for next daily submit; no P4/P5 until edit KPIs | |
 
-**Do not:** spin RunPod for smoke (use Kaggle); install all `/wheels`; peek holdout; start cloud without `CLOUD_APPROVAL`.
+**Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call budget; unlock P4/P5 while GATE_P3=FAIL.
 
 ---
 
@@ -59,13 +63,12 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 
 | Ticket | Status | Claimed by | Notes |
 | --- | --- | --- | --- |
-| P0.1–P0.9 | **done** | — | GATE_P0 closed |
-| S3_BACKUP | **done enough** | cursor-exec | model + full data + tools on S3 |
-| P1.1–P1.6 | **done** | cursor-exec | GATE_P1 PASS |
-| P2.1–P2.5 | **done** | cursor-exec | agent.yaml + skills + zip |
-| **P2.6** | **claimed / queued** | cursor-exec | Kaggle NvidiaL4 smoke v3; sampling aligned; wheelhouse mirrored |
-| P2.7 | pending | — | first Kaggle submit after GATE_P2 |
-| Phase 3+ | blocked | — | needs `GATE_P2` |
+| P0–P2 | **done** | — | GATE_P0/P1/P2 closed |
+| P2.7 | **submitted / score pending** | cursor | public score TBD |
+| P3.1–P3.3, P3.5, P3.7 | **done** (ablations) | cursor | see paper-notes ledger |
+| **P3.2b** | **claimed / Kaggle v19** | cursor | host `old_string` + max 5 edits |
+| GATE_P3 | **FAIL** | — | blocks P4/P5 |
+| Paper track | **notes only** | — | `docs/paper-notes.md`; decide ~Oct 20 |
 
 ---
 
@@ -136,3 +139,58 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-06T19:54:10Z | note | P2.6_tools | agent=cursor-exec | hash=none | metrics=pull_kaggle_smoke=1,classify_failures=1,wheels_harness=s3://gemma4-dev-agent-data-650825122703/tools/wheels_harness,swegemma=0.2.7 | next=P2.6 | blocker=none
 2026-10-06T19:54:10Z | note | P3.1_draft | agent=cursor-exec | hash=none | metrics=budget_grid=configs/budget_grid.yaml,run=blocked_until_GATE_P2 | next=GATE_P2 | blocker=none
 2026-10-06T19:54:10Z | note | P2.6 | agent=cursor-exec | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,version=3,sampling_aligned=1 | next=GATE_P2 | blocker=wait_L4_queue
+2026-10-06T20:01:26Z | note | P2.6_watchdog | agent=cursor | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma/3,poll_s=90,log=gemma4-agent/docs/watchdog_p26.log | next=GATE_P2 | blocker=wait_L4_queue
+2026-10-06T20:01:26Z | note | notebook_review | agent=cursor | hash=none | metrics=duo=matterhorn3838/gemma-gemini-the-ultimate-duo,budget=verracodeguacas/gemma-4-agent-budget-fit-single-agent,duo_is_budget_clone=1,gemini_teacher=absent_in_published,gaps=8min/28calls/edit_by_12/max_out_8192/timeout_240/discourage_graph/docs_src,budget_grid_updated=1 | next=P3_ablation_after_GATE_P2 | blocker=none
+2026-10-06T20:02:49Z | note | notebook_review | agent=cursor | hash=none | metrics=blackcat=lucifer19/pack-instinct,roman=romanrozen/eda-baseline,arch=analyzer+coder,blackcat_lb_anchor=0.12,challenger_repo_scout=not_promoted,roman_eda_hitk=1,gaps=subagent_analyzer,max_out_8192,include_thoughts_false,get_status_budget,tmp_repro,top_k_40 | next=P3_after_GATE_P2 | blocker=none
+2026-10-06T20:04:33Z | note | P3_plan | agent=cursor | hash=none | metrics=queue=P3.4_max_out8192,P3.6_thoughts_off,P3.1_budget_fit,P3.3_edit_by_12,P3.2_tmp_repro,P3.5_hitk_then_graph,P4.6_analyzer_coder | next=GATE_P2 | blocker=wait_P2.6_smoke
+2026-10-06T20:07:52Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v4,prev=ERROR,cause=agent_dataset_not_mounted,fix=wheelhouse_install+embed_agent_fallback,status=QUEUED | next=GATE_P2 | blocker=wait_L4_queue
+2026-10-06T20:14:02Z | done | P2.6-watchdog | agent=cursor | hash=none | metrics=status=ERROR | next=review_smoke_then_GATE_P2 | blocker=none
+2026-10-06T20:17:14Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v5,prev=v4_ERROR,cause=vllm_not_installed,fix=full_wheelhouse_install+byod_docker,status=QUEUED | next=GATE_P2 | blocker=wait_L4_queue
+2026-10-06T20:26:32Z | done | P2.6-watchdog | agent=cursor | hash=none | metrics=status=COMPLETE | next=review_smoke_then_GATE_P2 | blocker=none
+2026-10-06T20:27:09Z | done | P2.6 | agent=cursor | hash=none | metrics=kernel=v5,pass_at_1=0.0,resolved=0/10,hard_crash_rate=0,error=adapters_gitkeep_disallowed_extension | next=P2.6_v6 | blocker=none
+2026-10-06T20:27:09Z | gate | GATE_P2 | agent=cursor | hash=none | metrics=pass_at_1=0.0,crashes=0,cause=scaffold_adapters_gitkeep | next=P2.6_retry | blocker=fix_gitkeep_rerun_smoke
+2026-10-06T20:27:09Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v6,fix=remove_adapters_gitkeep,status=pushed | next=GATE_P2 | blocker=wait_L4
+2026-10-06T20:36:26Z | done | P2.6-watchdog | agent=cursor | hash=none | metrics=status=COMPLETE | next=review_smoke_then_GATE_P2 | blocker=none
+2026-10-06T20:37:11Z | done | P2.6 | agent=cursor | hash=none | metrics=kernel=v6,pass_at_1=0.0,resolved=0/10,hard_crash_rate=0,error=skill_missing_yaml_frontmatter | next=P2.6_v7 | blocker=none
+2026-10-06T20:37:11Z | gate | GATE_P2 | agent=cursor | hash=none | metrics=pass_at_1=0.0,crashes=0,cause=skill_frontmatter | next=P2.6_retry | blocker=fix_skills_rerun_smoke
+2026-10-06T20:37:11Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v7,fix=skill_yaml_frontmatter,status=pushed | next=GATE_P2 | blocker=wait_L4
+2026-10-06T20:49:14Z | done | P2.6 | agent=cursor | hash=none | metrics=kernel=v7,pass_at_1=0.0,resolved=0/10,hard_crash_rate=0,error=skill_name_must_be_kebab_case | next=P2.6_v8 | blocker=none
+2026-10-06T20:49:14Z | gate | GATE_P2 | agent=cursor | hash=none | metrics=pass_at_1=0.0,crashes=0,cause=skill_kebab_case | next=P2.6_retry | blocker=rename_skills_rerun_smoke
+2026-10-06T20:49:14Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v8,fix=kebab_case_skills,status=pushed | next=GATE_P2 | blocker=wait_L4
+2026-10-06T20:49:41Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v9,fix=remove_nested_debug_workflow,supersedes_v8,status=pushed | next=GATE_P2 | blocker=wait_L4
+2026-10-06T21:10:48Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v10,fix=max_output_tokens_8192,ablation=P3.4_early,reason=ContextWindowExceeded_32k,status=pushed | next=GATE_P2 | blocker=wait_L4
+2026-10-06T21:11:07Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v10,max_output_tokens=8192,status=RUNNING | next=GATE_P2 | blocker=none
+2026-10-06T21:23:04Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v11,max_output_tokens=4096,include_thoughts=0,thinking_budget=2048,reason=prompt_24577_plus_8192_overflow | next=GATE_P2 | blocker=wait_L4
+2026-10-06T21:41:43Z | note | P2.6 | agent=cursor | hash=none | metrics=kernel=v12,fix=compaction_token_threshold_14336_retention_5,max_out=2048,read_cap=40 | next=GATE_P2 | blocker=wait_L4
+2026-10-06T22:18:21Z | done | P2.6-watchdog | agent=cursor | hash=none | metrics=status=COMPLETE | next=review_smoke_then_GATE_P2 | blocker=none
+2026-10-06T22:19:21Z | done | P2.6 | agent=cursor | hash=b92db00d1f7cb64d | metrics=kernel=v12,pass_at_1=0.20,resolved=2/10,hard_crash_rate=0,patched=7/10,timeout=1,passes=rich_3882+rich_3905 | next=GATE_P2 | blocker=none
+2026-10-06T22:19:21Z | gate | GATE_P2 | agent=cursor | hash=b92db00d1f7cb64d | metrics=pass_at_1=0.20,zip_unpacked_bytes=3773,crashes=0,kernel=v12 | next=P3 | blocker=none
+2026-10-06T22:22:00Z | claim | P2.7 | agent=cursor | hash=b92db00d1f7cb64d | metrics=file=gemma4-agent/submission.zip | next= | blocker=none
+2026-10-06T22:22:00Z | done | P2.7 | agent=cursor | hash=b92db00d1f7cb64d | metrics=sha256=b92db00d1f7cb64d8ddeb0a045634e632e0582790165a803b89e0cf7ef0c363e,submitted=1,msg=GATE_P2_smoke_0.20_v12,public_score=pending | next=P3.1 | blocker=wait_public_score
+2026-10-07T03:00:52Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=40,provider=runpod,purpose=P3.1,sku=B300_MIG_34GB,expires=2026-10-08T23:59:59Z | next=P3.1 | blocker=none
+2026-10-07T03:00:52Z | claim | P3.1 | agent=cursor | hash=none | metrics=sku=B300_MIG_34GB,run=smoke_community_budget_fit | next=deploy | blocker=none
+2026-10-07T03:11:39Z | note | P3.1 | agent=cursor | hash=none | metrics=pod=8cl03m83qpkhuy,sku=RTX_A6000_48GB,cost_per_hr=0.53,b300_mig=SUPPLY_CONSTRAINT,budget=community_budget_fit,ssh=194.68.245.81:22103 | next=smoke_running | blocker=none
+2026-10-07T03:30:07Z | note | P3.1 | agent=cursor | hash=none | metrics=pass_at_1=0.0,cause=missing_authlib,sku=A6000,load_s=261.79,rerun=1 | next=smoke_rerun | blocker=none
+2026-10-07T04:03:54Z | done | P3.1_smoke | agent=cursor | hash=none | metrics=budget=community_budget_fit,pass_at_1=0.0,resolved=0/10,mean_s=174.82,extrap_h=5.827,wall_s=1748,load_s=103.45,sku=A6000,hard_crash=0,vs_p26_smoke=0.20,artifact=results/p31_community_budget_fit_smoke.json | next=P3.1_try_baseline_or_next_grid | blocker=community_budget_worse_on_smoke
+2026-10-07T04:03:54Z | note | P3.1_teardown | agent=cursor | hash=none | metrics=pod=8cl03m83qpkhuy,action=terminate | next= | blocker=none
+2026-10-07T04:05:41Z | claim | P3.1 | agent=cursor | hash=none | metrics=budget=baseline_300_60_5_80,run=smoke_positive_control,vs=community_budget_fit_0.0 | next=deploy | blocker=none
+2026-10-07T04:51:05Z | note | P3.1_baseline | agent=cursor | hash=none | metrics=action=terminate_pod=jbd6unj4lu2zry,reason=idle_gpu_during_model_download_too_slow,budget=baseline_not_run,cost_avoid=1 | next=rerun_with_model_ready_or_kaggle | blocker=none
+2026-10-07T04:52:01Z | note | P3.1 | agent=cursor | hash=none | metrics=provider=kaggle,kernel=moranzavdi/gemma4-p26-smoke-swegemma,budget=baseline_300_60_5_80,agent_ds=moranzavdi/gemma4-p26-agent-smoke,purpose=positive_control_vs_community_0.0 | next=watch_kernel | blocker=none
+2026-10-07T05:21:16Z | done | P3.1_baseline_kaggle | agent=cursor | hash=none | metrics=pass_at_1=0.1,resolved=1/10,provider=kaggle,kernel=v13,budget=baseline_300_60_5_80,vs_community=0.0,vs_p26=0.20,artifact=results/p31_baseline_kaggle_smoke.json | next=pareto_decision | blocker=none
+2026-10-07T05:22:29Z | claim | P3.3 | agent=cursor | hash=none | metrics=change=budget_discipline_edit_by_12 | next=skill_prompt_then_kaggle_smoke | blocker=none
+2026-10-07T05:22:58Z | note | P3.3 | agent=cursor | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,paths=anti-loop+system.md,rules=edit_by_12+get_status_8+lt25pct | next=smoke_results | blocker=none
+2026-10-07T05:59:29Z | done | P3.3 | agent=cursor | hash=none | metrics=pass_at_1=0.1,resolved=1/10,vs_baseline_kaggle=0.1,delta=+0.00,keep=1,artifact=results/p33_smoke.json | next=P3.2 | blocker=none
+2026-10-07T06:00:08Z | claim | P3.2 | agent=cursor | hash=none | metrics=change=tmp_repro_edit_hygiene | next=skill_then_kaggle | blocker=none
+2026-10-07T06:00:34Z | note | P3.2 | agent=cursor | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,paths=patch-rules+debug-workflow,rules=tmp_repro+exact_old_str | next=smoke_results | blocker=none
+2026-10-07T07:58:27Z | done | P3.2 | agent=cursor | hash=none | metrics=pass_at_1=0.2,resolved=2/10,vs_p33=0.1,delta=+0.10,keep=1,artifact=results/p32_smoke.json | next=P3.5_or_revert | blocker=none
+2026-10-07T08:00:43Z | claim | P3.5 | agent=cursor | hash=none | metrics=loc_hitk=results/loc_hitk.json,graph_hit_smoke=0.40,graph_hit_dev=0.29,lex_hit_smoke=0.50 | next=nav_grep_first_kaggle | blocker=none
+2026-10-07T08:00:53Z | note | P3.5 | agent=cursor | hash=none | metrics=kernel=v17,nav=grep_first,artifact=results/loc_hitk.json | next=smoke_results | blocker=none
+2026-10-07T09:16:25Z | note | P3.5 | agent=cursor | hash=none | metrics=pass_at_1=0.1,vs_p32=0.2,delta=-0.10,keep=0,action=revert_nav_to_graph_first,loc_hitk_kept=1 | next=GATE_P3_review | blocker=none
+2026-10-07T09:21:17Z | gate | GATE_P3 | agent=cursor | hash=8ad6728 | metrics=decision=FAIL,failed_edit_p2=0.375,failed_edit_p3_proxy=0.9709,loop_p2=0.387,loop_p3_proxy=0.4542,graph_hit_smoke=0.40,loc_hit_at_5_smoke=0.50,peak_tokens=15932,vllm_refuse=0,extrap_h=5.827,budget_winner=baseline_300_60_5_80,pass_at_1_kept=0.20,nav=graph_first,artifact=results/gate_p3_review.json | next=P3.7 | blocker=failed_edit_and_loops_above_threshold_no_P4_P5
+2026-10-07T09:21:17Z | claim | P3.7 | agent=cursor | hash=none | metrics=change=temperature_0.0,baseline_temp=0.2 | next=kaggle_smoke | blocker=none
+2026-10-07T09:21:56Z | note | P3.7 | agent=cursor | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,temp=0.0,vs=0.2,stack=P3.2+P3.3+graph_first+baseline | next=smoke_results | blocker=none
+2026-10-07T10:05:49Z | done | P3.7 | agent=cursor | hash=none | metrics=pass_at_1=0.2,resolved=2/10,temp=0.0,vs_p32_temp0.2=0.2,delta=+0.00,keep=1,action=keep_temp_0.0,artifact=results/p37_smoke.json | next=temp_0.7_or_stop | blocker=none
+2026-10-07T10:08:58Z | note | P3.7 | agent=cursor | hash=none | metrics=temp=0.0,pass_at_1=0.2,keep=1,skip_temp_0.7=1,reason=flat_vs_0.2_prefer_deterministic | next=edit_fail_focus | blocker=none
+2026-10-07T10:08:58Z | claim | P3.2b | agent=cursor | hash=none | metrics=change=edit_thrash_cap_exact_match | next=skill_then_kaggle | blocker=none
+2026-10-07T10:10:06Z | note | P3.2b | agent=cursor | hash=none | metrics=kernel=pushed,rules=old_string+max5_edits,p37_failed_edit=0.65,bad_args=34/40 | next=smoke_results | blocker=none
+2026-10-07T10:32:38Z | note | DOCS | agent=cursor | hash=none | metrics=status_board_synced=1,paper_notes=docs/paper-notes.md,stand=GATE_P2_PASS_GATE_P3_FAIL_P32b_v19 | next=git_push | blocker=none

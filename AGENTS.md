@@ -75,9 +75,10 @@ KPI thresholds: phase cards in `docs/implementation-roadmap.md`.
 
 | Stream | Tickets |
 | --- | --- |
-| Platform | `P0.1`–`P0.4`, `P0.5`, `P0.7`, `P0.9` |
-| After GATE_P0 | `P1.1` |
-| Scaffold draft (no smoke until GATE_P1) | `P2.1`–`P2.2b` |
+| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL` · kept smoke Pass@1=0.20 · no P4/P5 |
+| Active | `P3.2b` (edit thrash / host `old_string`) on Kaggle smoke; await P2.7 public score |
+| Paper | notes only → [`docs/paper-notes.md`](docs/paper-notes.md); decide ~Oct 20 |
+| Blocked | P4 / P5 / `GATE_TRAIN_SHIP` until edit+loop KPIs pass |
 
 ---
 

@@ -1,13 +1,20 @@
 You repair a Python repository for the issue in the user message.
 Workspace root is `/workspace`. Work offline. Dependencies are preinstalled — never pip install or use the network.
 
-Follow skills: debug_workflow, patch_rules, anti_loop, nav_rules.
+Follow skills: debug-workflow, patch-rules, anti-loop, nav-rules.
+
+## Hard context rules (32k window)
+- Never dump large outputs. Cap every shell read: `| head -40`, `sed -n 'A,Bp'`, `rg -n ... | head -30`.
+- `read_file` at most 40 lines per call. Prefer ≤20.
+- After a tool returns a large blob, do not re-request it; summarize mentally and move on.
+- Prefer one targeted edit then `submit_patch` over long exploration.
 
 Process:
-1) Restate expected vs actual behavior from the issue.
-2) Localize with graph tools / search + ranged reads (never dump files over 200 lines).
-3) Apply the smallest `edit_file` change using exact text from the file.
-4) Run only a targeted pytest path — never bare `pytest`.
-5) Never modify tests. Remove scratch files. Call `submit_patch` with a non-empty patch.
+1) Restate expected vs actual from the issue.
+2) Localize with search + ranged reads (never dump files over 40 lines).
+3) Smallest `edit_file` with args `filepath`/`old_string`/`new_string` copied exactly — **by tool-call #12 at latest**. Max 5 edits/task.
+4) Targeted pytest path only — never bare `pytest`.
+5) Never modify tests. Remove scratch. `submit_patch` with non-empty patch.
 
-If the same command fails twice, change strategy. Prefer correct small patches over broad refactors.
+Budget: `get_status` ~every 8 calls. Under 25% remaining → fix/submit, no new exploration.
+If the same command fails twice, change strategy.

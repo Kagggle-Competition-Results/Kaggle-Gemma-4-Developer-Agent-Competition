@@ -1,23 +1,35 @@
-# P3.1 draft — budget Pareto grid (do not run until GATE_P2 = PASS)
-
-One ablation variable: **budget only** (G3). Pick winner on `dev` with
-`extrapolated_hours_120 <= 10.0`.
+# P3.1 — budget Pareto grid (do not run until GATE_P2 = PASS)
+# One ablation variable: budget only (G3). Sampling changes = P3.4 / P3.6.
 
 grids:
   - {time_limit_sec: 180, max_tool_calls: 40, max_turns: 50}
   - {time_limit_sec: 300, max_tool_calls: 60, max_turns: 80}   # current agent/eval_config.yaml
   - {time_limit_sec: 360, max_tool_calls: 80, max_turns: 100}
   - {time_limit_sec: 480, max_tool_calls: 100, max_turns: 120}
+  # Community-measured (verracodeguacas budget-fit): longer wall + hard call cap
+  - {id: community_budget_fit, time_limit_sec: 480, max_tool_calls: 28, max_turns: 80, timeout_seconds: 240}
 
-# Map to eval_config.yaml keys:
-#   timeout_seconds ≈ time_limit_sec (sandbox cmd)
+# Map to eval_config.yaml:
+#   timeout_seconds = explicit timeout_seconds if set, else time_limit_sec (cmd timeout;
+#                     also used by scoring pytest — community: 240s for slow requests suites)
 #   max_time_minutes = time_limit_sec / 60
 #   max_tool_calls, max_turns as above
 
 selection_rule: max resolve_rate on dev subject to extrapolated_hours_120 <= 10.0
 
+measure:
+  artifact: results/budget_pareto.json
+  per_point: [pass_at_1_dev, mean_tool_calls, mean_wall_s, extrapolated_hours_120]
+  keep: winner satisfying selection_rule
+
+# Companion ablations (NOT this file — see implementation-roadmap Phase 3 queue):
+#   P3.4 max_output_tokens 16384 → 8192
+#   P3.6 include_thoughts true → false
+#   P3.3 edit-by-12 + get_status budget discipline
+#   P4.6 analyzer+coder topology A/B
+
 # Baseline to fill after P2.6 smoke (do not invent):
 # failed_edit_rate:
 # loop_rate:
-# pass_at_1_smoke:
+pass_at_1_smoke: 0.20  # P2.6 kernel v12
 # pass_at_1_dev:

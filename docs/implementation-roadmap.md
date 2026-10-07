@@ -185,39 +185,57 @@ Plug context leaks, kill loops, enforce budget discipline.
 
 ### Must
 - Budget Pareto; strengthen edit reliability; anti-loop; context reserve; graph-first + shell fallback; measure peak tokens.
+- Run community-backed ablations in the **ordered queue** below (sources logged 2026-10-06: budget-fit, Black Cat / Roman analyzer+coder). Do not merge them into one run.
 
 ### Must not
 - Multi-change ablations; ignore G11; proceed without budget extrapolation.
+- Promote multi-agent topology in Phase 3 (that is Phase 4).
 
 ### Cloud (optional)
 - Yes — parallel prompt/budget/tool sweeps. Suggested ~10–20 workers (AWS Spot / RunPod). **Operator chooses SKUs.** Needs `CLOUD_APPROVAL` before spin-up. KPIs do not relax.
 
+### Ordered ablation queue (after GATE_P2) — highest value first
+| Order | Ticket | Change (one variable) | Measure / keep-if |
+| --- | --- | --- | --- |
+| 1 | **P3.4** | `configs/sampling.yaml`: `max_output_tokens` **16384 → 8192** (vLLM refuses prompt+out &gt;32k) | `vllm_refuse_rate=0`; `peak_tokens≤28k`; Pass@1 on `dev` ≥ baseline |
+| 2 | **P3.6** | `include_thoughts: false` (Black Cat / Roman default; thoughts on is starter) | Pass@1 on `dev`; keep if ↑ or flat with lower `peak_tokens` |
+| 3 | **P3.1** | Budget grid incl. **community_budget_fit**: 8 min / 28 calls / `timeout_seconds=240` | `pass_at_1_dev`; `extrapolated_hours_120≤10`; pick winner by selection_rule |
+| 4 | **P3.3** | Budget-discipline rules: `get_status` ~every 8 calls; &lt;25% budget → fix/submit; **edit source by call 12** | `loop_rate&lt;5%`; `no_edit_by_12_rate` ↓; Pass@1 |
+| 5 | **P3.2** | Reproduce hygiene: `/tmp/repro.py` before edit; whitespace-exact `old_str` | `failed_edit` ↓ ≥50% vs P2 |
+| 6 | **P3.5** | First measure **lexical Hit@5** (Roman TF-IDF style) on smoke/dev; only then ablate graph-first vs grep-first (community: graph often empty) | `loc_hit_at_5`; graph `hit≥60%` or **kill → grep-first** |
+| 7 | **P3.7** | Temp 0.0 / 0.2 / 0.7 (optional after 1–4 settle) | Pass@1 winner on `dev` |
+
+Optional companion (same G3 isolation): `top_k: 40` with P3.4 or P3.6 — log as separate run if combined would violate G3.
+
 ### Tickets
 | ID | Work | Owned paths | Artifact | DoD |
 | --- | --- | --- | --- | --- |
-| P3.1 | Budget Pareto | `eval_config.yaml`, `configs/budget_grid.yaml` | winner budgets | extrap ≤10h |
-| P3.2 | Edit reliability | `skills/patch_rules.md` | skill v2 | failed_edit ↓ ≥50% vs P2 |
-| P3.3 | Anti-loop | `skills/anti_loop.md` | skill | loops &lt;5% |
-| P3.4 | Context reserve | gen config / skills | lower max_out if needed | peak ≤28k |
-| P3.5 | Graph-first nav | `skills/nav_rules.md` + enable graph tools | nav skill | hit ≥60% or kill |
-| P3.6 | Thinking ablate | agent.yaml | on/off result | keep if holdout↑ |
-| P3.7 | Temp ablate | agent.yaml | 0.0/0.2/0.7 | pick winner |
+| P3.1 | Budget Pareto (+ community 8min/28calls/timeout 240) | `agent/eval_config.yaml`, `configs/budget_grid.yaml` | winner budgets + `results/budget_pareto.json` | extrap ≤10h; grid ≥ includes `community_budget_fit` |
+| P3.2 | Edit reliability (+ `/tmp` repro) | `agent/skills/patch_rules/`, `agent/skills/debug_workflow/` | skill v2 | failed_edit ↓ ≥50% vs P2 |
+| P3.3 | Anti-loop + budget discipline | `agent/skills/anti_loop/`, `agent/prompts/system.md` | skill/prompt | loops &lt;5%; edit-by-12 rule present |
+| P3.4 | Context reserve / max_out 8192 | `agent/configs/sampling.yaml` | sampling v2 | peak ≤28k; vllm_refuse_rate=0 |
+| P3.5 | Loc diagnostic → graph vs grep | `agent/skills/nav_rules/`, `results/loc_hitk.json` | nav decision | Hit@5 logged; graph hit ≥60% or kill |
+| P3.6 | Thinking / include_thoughts ablate | `agent/configs/sampling.yaml` | on/off result | keep if Pass@1↑ or flat+cheaper ctx |
+| P3.7 | Temp ablate | `agent/configs/sampling.yaml` | 0.0/0.2/0.7 | pick winner |
 
 ### Quantitative KPIs
 | KPI | Threshold | vs baseline |
 | --- | --- | --- |
 | Failed edit rate | &lt;10% of `edit_file` calls | ≥50% reduction vs Phase 2 |
 | Duplicate cmd loops | &lt;5% of agent steps | identical consecutive failures |
-| Graph tool hit rate | ≥60% successful symbol resolution | `rg` only on empty returns |
-| Peak context footprint | ≤28,000 tokens | 0 truncation-amnesia events |
+| No-edit-by-call-12 rate | track; target ↓ vs P2 scaffold | community: still-exploring @12 → ~87% fail |
+| Graph tool hit rate | ≥60% successful symbol resolution | else kill graph-first → grep-first |
+| Localization Hit@5 | log on smoke+dev (no gate) | informs P3.5 / P4 need |
+| Peak context footprint | ≤28,000 tokens | 0 truncation-amnesia; 0 vLLM refuse |
 | Extrapolated budget | ≤10h for 120 tasks | ≥2h margin under 12h |
+| Pass@1 delta per ablation | log on `dev` | one variable; no holdout tune (G4) |
 
 ### Hard gate
 - **PASS** only if budget extrap holds **and** edit-fail ≤ half of Phase 2 (and &lt;10%) → unlock optional P4 or P5.
 - **FAIL** → no P4/P5.
 
 ### Hand-off
-`GATE_P3 = PASS|FAIL | failed_edit=… | loops=… | graph_hit=… | peak_tokens=… | extrap_h=… | next=P4|P5`
+`GATE_P3 = PASS|FAIL | failed_edit=… | loops=… | graph_hit=… | loc_hit_at_5=… | peak_tokens=… | vllm_refuse=… | extrap_h=… | budget_winner=… | next=P4|P5`
 
 ---
 
@@ -234,9 +252,11 @@ Decide if specialized sub-agents beat single-agent by numeric Δ.
 
 ### Must
 - Navigator / patcher / verifier prompts; orchestrator; A/B vs Phase 3 single-agent on `dev` same budgets.
+- **Primary community topology to A/B first:** `analyzer+coder` (Roman / Black Cat: read-only `code_analyzer` as `agent_tool`, scored public anchor **0.12**). Keep budgets/sampling frozen from GATE_P3 winner (G3 = topology only).
 
 ### Must not
 - Require multi-LoRA at this phase; ship r=128; ignore handoff/context regressions.
+- Bundle Black Cat v13 `repo-scout` BM25 skill into the first A/B (unpromoted; pilot had 0 task pairs) — optional P4.7 only if analyzer+coder wins or ties.
 
 ### Cloud (optional)
 - Parallel A/B runs with approval.
@@ -244,18 +264,20 @@ Decide if specialized sub-agents beat single-agent by numeric Δ.
 ### Tickets
 | ID | Work | Owned paths | Artifact | DoD |
 | --- | --- | --- | --- | --- |
-| P4.1 | repo_navigator | prompts + yaml | read-only nav agent | no edits |
-| P4.2 | diff_patcher | prompts + yaml | surgical edits | patch_rules |
+| P4.1 | repo_navigator / `code_analyzer` | prompts + `sub_agents/` | read-only nav agent | no edits; LOCATION/ROOT CAUSE/FIX PLAN format |
+| P4.2 | diff_patcher / `swe_coder` | prompts + yaml | surgical edits | patch_rules |
 | P4.3 | test_verifier | prompts + yaml | focused tests | one repair handoff max |
-| P4.4 | lead_orchestrator | `agent.yaml` | root wiring | host schema |
+| P4.4 | lead_orchestrator | `agent/agent.yaml` | root wiring | host schema; `agent_tool` + `skip_summarization` |
 | P4.5 | Adapter fields | yaml stubs | empty/omit until P5 | clean A/B |
-| P4.6 | A/B vs single | results | Δ Pass@1 on dev | kill rule applied |
+| P4.6 | A/B vs single | `results/topology_ab.json` | Δ Pass@1 on dev | kill if &lt;+5% abs |
+| P4.7 | Optional repo-scout skill | `agent/skills/repo-scout/` | BM25 locate | only if P4.6 pass/tie; else skip |
 
 ### Quantitative KPIs
 | KPI | Threshold |
 | --- | --- |
 | Topology Δ Pass@1 | ≥ **+5% absolute** on `dev` vs Phase 3 single-agent |
 | Handoff latency | &lt;2% of total task time |
+| Analyzer useful rate | share of tasks where coder edits LOCATION file (log; no hard gate) |
 
 ### Hard gate
 - **PASS** (≥+5%, no context-truncation regression) → freeze multi for P5.

@@ -2,10 +2,10 @@ name: repository_fixer
 model: gemma-4-31b-it-qat-w4a16-ct
 instruction: !include prompts/system.md
 skills:
-  - skills/debug_workflow
-  - skills/patch_rules
-  - skills/anti_loop
-  - skills/nav_rules
+  - skills/debug-workflow
+  - skills/patch-rules
+  - skills/anti-loop
+  - skills/nav-rules
 tools:
   - run_command
   - read_file

@@ -61,7 +61,7 @@ def main() -> int:
     t0 = time.time()
 
     # Skill smoke: ensure G11 eviction text present (host layout: skills/<name>/SKILL.md)
-    patch_rules_path = skills_dir / "patch_rules" / "SKILL.md"
+    patch_rules_path = skills_dir / "patch-rules" / "SKILL.md"
     patch_rules = patch_rules_path.read_text() if patch_rules_path.is_file() else ""
     g11_ok = "200 lines" in patch_rules
 

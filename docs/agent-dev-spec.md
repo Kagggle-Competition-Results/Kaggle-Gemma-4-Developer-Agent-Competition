@@ -219,8 +219,12 @@ grids:
   - {time_limit_sec: 300, max_tool_calls: 60}
   - {time_limit_sec: 360, max_tool_calls: 80}
   - {time_limit_sec: 480, max_tool_calls: 100}
+  # community_budget_fit (measure in P3.1):
+  - {time_limit_sec: 480, max_tool_calls: 28, max_turns: 80, timeout_seconds: 240}
 selection_rule: max resolve_rate on dev subject to extrapolated_hours_120 <= 10.0
 ```
+
+P3 ordered queue + KPIs: [`implementation-roadmap.md`](./implementation-roadmap.md) Phase 3. Sampling companions (`max_output_tokens: 8192`, `include_thoughts: false`) are **not** budget vars — run as P3.4 / P3.6.
 
 ---
 
@@ -366,7 +370,19 @@ submit-check: zip
 - [ ] `results/smoke.json` with KPI fields; `hard_crash_rate=0`; pass_at_1 logged
 
 ### P3.1
-- [ ] ≥3 grid points on `dev`; winner in `eval_config.yaml`; `extrapolated_hours_120 <= 10.0`
+- [ ] ≥3 grid points on `dev` **including** `community_budget_fit` (8min/28calls/timeout 240); winner in `eval_config.yaml`; `extrapolated_hours_120 <= 10.0`; write `results/budget_pareto.json`
+
+### P3.4 / P3.6 (community sampling — run before or after P3.1, never mixed with budget in one run)
+- [ ] P3.4: `max_output_tokens=8192`; log `peak_tokens`, `vllm_refuse_rate`, Pass@1_dev
+- [ ] P3.6: `include_thoughts` on vs off; keep if Pass@1↑ or flat with lower peak tokens
+
+### P3.3 / P3.2 / P3.5
+- [ ] P3.3: edit-by-12 + get_status/~25% cutoff; log `loop_rate`, `no_edit_by_12_rate`
+- [ ] P3.2: `/tmp` repro + edit hygiene; `failed_edit` ↓ ≥50% vs P2
+- [ ] P3.5: `results/loc_hitk.json` (Hit@5); then graph-first vs grep-first; kill graph if hit &lt;60%
+
+### P4.6 (after GATE_P3)
+- [ ] A/B `analyzer+coder` vs Phase 3 single-agent; same budgets; `results/topology_ab.json`; kill if Δ Pass@1 &lt; +5% abs on `dev`
 
 Phase KPI gates (PASS/FAIL/PIVOT) are authoritative in [`implementation-roadmap.md`](./implementation-roadmap.md).
 
