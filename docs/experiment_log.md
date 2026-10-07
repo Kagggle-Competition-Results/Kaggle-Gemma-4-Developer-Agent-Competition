@@ -34,7 +34,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 # GATE_P4 = (blocked by GATE_P3 FAIL)
 # GATE_TRAIN_SHIP = (blocked by GATE_P3 FAIL)
 # GATE_P6 = (pending)
-# CLOUD_APPROVAL = expired/idle — no live RunPod/EC2 (last P3.1 pods terminated)
+# CLOUD_APPROVAL = expired/idle — gemma4 Spot terminated (2026-10-07); RunPod idle (need API key for GPU)
 # S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
 ```
 
@@ -47,15 +47,18 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Phase 3 | **IN PROGRESS** / `GATE_P3=FAIL` | kept Pass@1=0.20; edit/loop KPIs fail |
 | Harness verify | **2026-10-06.5** | `gemma4-agent/docs/harness_verify.md` + `sandbox/` |
 | Soundness CSV | on S3 | `s3://…/results/soundness.csv` |
-| RunPod / EC2 | **terminated** | prefer Kaggle L4 for smoke |
+| RunPod / EC2 | **no gemma4 workers** (Spot terminated) | prefer Kaggle L4 for smoke |
 | Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` |
-| Smoke kernel | **v19 RUNNING** (P3.2b) | `moranzavdi/gemma4-p26-smoke-swegemma` |
-| Official submit P2.7 | **PENDING** (~12h+) | ref see competitions UI; sha `b92db00d…` |
-| Paper notes | **seeded** | [`docs/paper-notes.md`](./paper-notes.md) |
-| **Kept stack** | baseline budgets + P3.2/P3.3 + graph-first + temp 0.0 + P3.2b edit caps | `gemma4-agent/agent/` |
-| Next | pull P3.2b; cut wall for next daily submit; no P4/P5 until edit KPIs | |
+| Smoke kernel | **v20 RUNNING** (P3.8 wall-4min) | `moranzavdi/gemma4-p26-smoke-swegemma` |
+| Official submit P2.7 | **PENDING** | ref `56892002`; sha `b92db00d…` |
+| Official submit P3.8 | **PENDING** (today) | ref `56909388`; sha `c3136b1b…`; wall 4 min |
+| Paper notes | **updated** | [`docs/paper-notes.md`](./paper-notes.md) |
+| **Kept stack** | P3.2/P3.3 + graph-first + temp 0.0 + **max_time=4** (P3.8) | `gemma4-agent/agent/` |
+| P3 metrics | **DONE** local+S3 | `results/p3_metrics_batch/` · kept failed_edit=0.65 (p37) |
+| Next | pull P3.8 smoke; await LB scores; then Kaggle `dev` Pass@1; no P4/P5 | |
+| **Wall reminder** | 4 min ≠ guaranteed &lt;12h | if LB timeout → next zip **3–3.5 min** (see paper-notes §4) |
 
-**Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call budget; unlock P4/P5 while GATE_P3=FAIL.
+**Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call budget; unlock P4/P5 while GATE_P3=FAIL; assume wall=4 alone finishes 120 tasks under 12h.
 
 ---
 
@@ -66,8 +69,10 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | P0–P2 | **done** | — | GATE_P0/P1/P2 closed |
 | P2.7 | **submitted / score pending** | cursor | public score TBD |
 | P3.1–P3.3, P3.5, P3.7 | **done** (ablations) | cursor | see paper-notes ledger |
-| **P3.2b** | **claimed / Kaggle v19** | cursor | host `old_string` + max 5 edits |
-| GATE_P3 | **FAIL** | — | blocks P4/P5 |
+| P3.2b | **done / reverted** | cursor | Pass@1 0.10; failed_edit 0.91; revert |
+| P3_metrics | **done** | cursor | Spot CPU loc+KPIs+classify+zip dry-run; Spot terminated |
+| **P3.8** | **claimed / kernel v20 + submitted** | cursor | wall 5→4 min; smoke RUNNING; LB pending |
+| GATE_P3 | **FAIL** | — | blocks P4/P5 (kept failed_edit=0.65 still ≫10%) |
 | Paper track | **notes only** | — | `docs/paper-notes.md`; decide ~Oct 20 |
 
 ---
@@ -194,3 +199,16 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-07T10:08:58Z | claim | P3.2b | agent=cursor | hash=none | metrics=change=edit_thrash_cap_exact_match | next=skill_then_kaggle | blocker=none
 2026-10-07T10:10:06Z | note | P3.2b | agent=cursor | hash=none | metrics=kernel=pushed,rules=old_string+max5_edits,p37_failed_edit=0.65,bad_args=34/40 | next=smoke_results | blocker=none
 2026-10-07T10:32:38Z | note | DOCS | agent=cursor | hash=none | metrics=status_board_synced=1,paper_notes=docs/paper-notes.md,stand=GATE_P2_PASS_GATE_P3_FAIL_P32b_v19 | next=git_push | blocker=none
+2026-10-07T10:52:59Z | done | P3.2b | agent=cursor | hash=none | metrics=pass_at_1=0.1,resolved=1/10,failed_edit=0.9114,loop_rate=0.5507,vs_p32=0.2,delta=-0.10,keep=0,action=revert_P3.2b,artifact=results/p32b_smoke.json | next=submit_or_dev | blocker=none
+2026-10-07T10:55:00Z | note | P3.2b | agent=cursor | hash=none | metrics=revert=1,reason=pass_down_and_edit_worse,p37_failed_edit=0.65,p32b_failed_edit=0.91,bad_args_dominate=1,restored=P3.2+P3.3+temp0.0+graph_first | next=daily_submit_shorter_wall | blocker=none
+2026-10-07T11:04:27Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=30,provider=aws,spot_cpu,purpose=P3_metrics_batch,ami=ami-0794230e150561868,expires=2026-10-08T23:59:59Z | next=P3_metrics | blocker=none
+2026-10-07T11:04:27Z | claim | P3_metrics | agent=cursor | hash=none | metrics=worker=ssm_i-002722a92d22eefde,s3=results/p3_metrics_batch | next=ssm_batch | blocker=none
+2026-10-07T11:04:27Z | note | P3_metrics | agent=cursor | hash=none | metrics=local=loc_hitk_dev+smoke,trace_kpis=p37_0.65_vs_p32b_0.91,classify=edit_fail+loop,s3_push=1,orphan_ec2=5xgemma4-p11-soundness | next=ssm_verify+terminate_orphans | blocker=none
+2026-10-07T11:10:00Z | note | P3_metrics_teardown | agent=cursor | hash=none | metrics=terminated=4xspot+1xondemand_gemma4-p11-soundness,policy=spot_only_count_1 | next=single_spot_launch | blocker=none
+2026-10-07T11:12:00Z | note | P3_metrics | agent=cursor | hash=none | metrics=instance=i-013c9b7cd71afadb3,type=c7i.xlarge,market=spot,name=gemma4-p3-metrics-spot,user_data=spot_p3_metrics_batch.sh | next=s3_results/p3_metrics_batch | blocker=none
+2026-10-07T11:20:00Z | done | P3_metrics_optional | agent=cursor | hash=8829a00049986f728588b0dea66956005df7934b06d0f8f16d4c19d89efb573b | metrics=inventory_ok=1,trace_kpis_all=p37_0.65_p35_0.97_p32b_0.91,p35_classified=1,zip_unpacked_bytes=5594,artifact=s3://gemma4-dev-agent-data-650825122703/results/p3_metrics_batch/ | next=terminate_spot_or_kaggle_dev | blocker=none
+2026-10-07T11:22:00Z | done | P3_metrics_teardown | agent=cursor | hash=none | metrics=terminated=i-013c9b7cd71afadb3,spot_req=sir-hacfnh7j_cancelled,gemma4_running=0,local_sync=results/p3_metrics_batch,s3_sync=1,docs=paper_notes+board | next=kaggle_dev_or_daily_submit | blocker=none
+2026-10-07T11:28:00Z | claim | P3.8 | agent=cursor | hash=none | metrics=change=max_time_minutes_5_to_4,g3=wall_only,kept=P3.2+P3.3+graph_first+temp0.0 | next=kaggle_smoke+daily_submit | blocker=none
+2026-10-07T11:27:53Z | note | P3.8 | agent=cursor | hash=c3136b1ba5ed90e0 | metrics=kernel=v20_RUNNING,agent_ds=pushed,max_time_min=4,timeout=300,calls=60,turns=80 | next=smoke_results | blocker=none
+2026-10-07T11:27:53Z | done | P3.8_submit | agent=cursor | hash=c3136b1ba5ed90e0d0a08298cfb169ac8fd8db91d04f55cdf9ea614eb18d6cb2 | metrics=ref=56909388,msg=wall_4min_kept_stack,public_score=pending,daily_remaining=0 | next=watch_score+p38_smoke | blocker=none
+2026-10-07T11:40:00Z | note | DOCS | agent=cursor | hash=none | metrics=wall_checklist=paper_notes_s4,reminder=4min_not_enough_if_LB_timeout_try_3_to_3.5 | next=p38_smoke | blocker=none

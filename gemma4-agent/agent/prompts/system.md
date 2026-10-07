@@ -12,7 +12,7 @@ Follow skills: debug-workflow, patch-rules, anti-loop, nav-rules.
 Process:
 1) Restate expected vs actual from the issue.
 2) Localize with search + ranged reads (never dump files over 40 lines).
-3) Smallest `edit_file` with args `filepath`/`old_string`/`new_string` copied exactly — **by tool-call #12 at latest**. Max 5 edits/task.
+3) Smallest `edit_file` with exact `old_str` from the file — **by tool-call #12 at latest**.
 4) Targeted pytest path only — never bare `pytest`.
 5) Never modify tests. Remove scratch. `submit_patch` with non-empty patch.
 

@@ -4,9 +4,9 @@
 
 **Competition:** [gemma-4-developer-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent) · Paper: [gemma-4-developer-agent-paper](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper)
 
-**Last updated:** 2026-10-07 (post GATE_P3 FAIL, P3.7 keep temp 0.0, P3.2b on Kaggle v19)
+**Last updated:** 2026-10-07 (P3.8 wall-4min submitted + smoke v20; GATE_P3 still FAIL)
 
-**Stand:** GATE_P2 PASS · GATE_P3 FAIL · kept smoke Pass@1 **0.20** · official P2.7 score still **PENDING** · P4/P5 blocked.
+**Stand:** GATE_P2 PASS · GATE_P3 FAIL · P3.2b **reverted** · kept failed_edit **0.65** · **P3.8** wall 5→4 min **submitted** (ref 56909388) · smoke v20 **RUNNING** · P2.7 still **PENDING** · P4/P5 blocked.
 
 **Sources of truth:** [`experiment_log.md`](./experiment_log.md) · `gemma4-agent/results/*` · [`agent-dev-spec.md`](./agent-dev-spec.md)
 
@@ -51,7 +51,8 @@
 | P3.5 | nav → grep-first (after Hit@5) | Kaggle v17 | **0.10** | 1/10 | **no** | −0.10 vs P3.2; reverted to graph-first |
 | P3.4 / P3.6 | `max_out`↓, `include_thoughts:false` | (folded into P2.6) | — | — | kept | done early for context |
 | P3.7 | `temperature: 0.0` (was 0.2) | Kaggle v18 | **0.20** | 2/10 | **yes** | flat vs 0.2; skip 0.7; keep deterministic 0.0 |
-| P3.2b | host `old_string`/`new_string` + max 5 edits/task | Kaggle v19 | TBD | TBD | **running** | P3.7 traces: failed_edit≈0.65; 34/40 bad args |
+| P3.2b | host `old_string`/`new_string` + max 5 edits/task | Kaggle v19 | **0.10** | 1/10 | **no** | failed_edit=0.9114; loop=0.5507; revert_P3.2b |
+| P3.8 | `max_time_minutes` **5 → 4** (wall throughput) | Kaggle v20 + LB submit | TBD | TBD | **running** | G3=wall only; kept stack; zip sha `c3136b1b…` |
 
 ### Per-task highlights (kept vs rejected)
 
@@ -68,25 +69,53 @@
 | Config | timeout_s | max_tool_calls | max_time_min | max_turns | Smoke Pass@1 | Extrap h/120 |
 | --- | --- | --- | --- | --- | --- | --- |
 | community_budget_fit | 240 | 28 | 8 | 80 | 0.00 | **5.83** (mean wall) |
-| baseline (shipped) | 300 | 60 | 5 | 80 | 0.10–0.20 | not remeasured on Kaggle wall |
+| baseline (pre-P3.8) | 300 | 60 | 5 | 80 | 0.10–0.20 | not remeasured on Kaggle wall |
+| **P3.8 wall-4min (shipped)** | 300 | 60 | **4** | 80 | TBD (smoke v20) | target: more tasks under 12h LB |
 
-**Host implication:** `5 min × 120 ≈ 10h` agent time alone + load/overhead → easy to approach/exceed **12h** official scoring. First public submit (P2.7, 2026-10-06) still `PENDING` after ~12h — watch for partial score / hard stop.
+**Host implication:** `5 min × 120 ≈ 10h` agent time alone + load/overhead → easy to approach/exceed **12h** official scoring. First public submit (P2.7, 2026-10-06) still `PENDING` after ~12–15h — likely wall overrun and/or scorer backlog; treat long PENDING as a **throughput** signal, not only model quality.
 
 **Selection rule (P3.1):** max resolve subject to `extrapolated_hours_120 ≤ 10` → community rejected despite OK extrap.
 
 Artifact: `gemma4-agent/results/budget_pareto.json`
+
+### Remember next daily submit — 12h wall checklist (P3.8+)
+
+**Do not assume `max_time_minutes: 4` alone prevents another 12–15h scoring run.**
+
+Rough extrap for **120** official tasks (agent budget + per-task overhead):
+
+| `max_time_minutes` | Agent alone | +~60s overhead/task | +~90s overhead/task | Margin vs 12h |
+| --- | --- | --- | --- | --- |
+| **5** (P2.7) | 10.0 h | ~12.0 h | ~13.0 h | **none / over** |
+| **4** (P3.8 shipped) | 8.0 h | ~10.0 h | ~11.0 h | ~1–2 h — **helps, not guaranteed** |
+| **3.5** | 7.0 h | ~9.0 h | ~10.0 h | safer |
+| **3** | 6.0 h | ~8.0 h | ~9.0 h | comfortable |
+
+**What 4 min does *not* change (still in shipped zip unless ablated):**
+- `timeout_seconds: 300` (cmd timeout still 5 min; clipped by remaining session time)
+- `max_tool_calls: 60` (can still burn the full wall exploring)
+- Sandbox / pytest / host overhead outside agent clock
+- Scorer queue / hang (PENDING ≠ always “still generating patches”)
+
+**If P3.8 LB is 0 / partial / still PENDING past ~12h → next submit (one G3 variable):**
+1. Prefer cut wall further: **`max_time_minutes: 3` or `3.5`** (keep calls=60 first), **or**
+2. Mild call cut: **`max_tool_calls: 40–45`** (keep wall=4) — **not** community 28/8 (killed Pass@1).
+3. Before shipping: smoke mean wall × 120 → must land **`extrapolated_hours_120 ≤ 10`**.
+4. Log ticket as `P3.8b` (or next wall A/B); do not combine wall + calls + prompts in one zip.
+
+**Decision rule:** if smoke Pass@1 holds at 4 min but LB times out → **tighten wall again**, do not revert to 5.
 
 ---
 
 ## 5. Localization diagnostic (P3.5)
 
 Script: `gemma4-agent/scripts/measure_loc_hitk.py`  
-Artifact: `gemma4-agent/results/loc_hitk.json` (+ `_smoke` / `_dev`)
+Artifacts: `results/p3_metrics_batch/loc_hitk_{smoke,dev}.json` (local + S3; Spot re-confirmed 2026-10-07)
 
 | Split | n | Lexical Hit@5 | Graph→file Hit@5 | Threshold | Auto-recommend |
 | --- | --- | --- | --- | --- | --- |
 | smoke | 10 | **0.50** | **0.40** | 0.60 | grep_first |
-| dev | 35 | **0.43** | **0.29** | 0.60 | grep_first |
+| dev | 35 | **0.4286** | **0.2857** | 0.60 | grep_first |
 
 **Outcome:** shipping grep-first **regressed** Pass@1 → **keep graph-first** in agent; diagnostic still valuable for paper (“proxy ≠ policy”).
 
@@ -109,7 +138,25 @@ Artifact: `gemma4-agent/results/gate_p3_review.json`
 | Extrap h | ≤10 | — | 5.83 (community) | yes |
 | Graph loc hit | ≥60% or kill | — | 0.40 / 0.29 | kill attempted, reverted |
 
-\*P3.5 traces include rejected nav + P3.2/P3.3 skills — pessimistic proxy for edit quality; **re-measure on pure P3.2 traces** before paper claims.
+\*P3.5 traces include rejected nav + P3.2/P3.3 skills — pessimistic proxy for edit quality.
+
+### Re-measure after Spot CPU metrics (2026-10-07)
+
+Artifacts: `gemma4-agent/results/p3_metrics_batch/trace_kpis_all.json` (+ S3 same prefix).
+
+| Trace set | Stack | failed_edit | loop_rate | bad_arg_rate | edits |
+| --- | --- | --- | --- | --- | --- |
+| **p37** (kept) | P3.2+P3.3+graph-first+temp 0.0 | **0.6452** | 0.5161 | 0.50 | 62 |
+| p35 (rejected) | + grep-first | 0.9709 | 0.4542 | 0.9709 | 103 |
+| p32b (rejected) | + host-arg / max-5 caps | 0.9114 | 0.5507 | 0.9114 | 79 |
+
+Kept stack still fails GATE_P3 edit thresholds (&lt;10% / ≤½ P2). Prefer **p37** over P3.5 proxy for paper claims. Soft edit hygiene next — not hard caps (P3.2b hurt).
+
+**Loc Hit@5 (offline, Spot+local):** smoke lex **0.50** / graph **0.40** (n=10); **dev** lex **0.4286** / graph **0.2857** (n=35). Both &lt;60% → diagnostic still says grep-first, but Pass@1 A/B already rejected that (keep graph-first).
+
+**Inventory:** 129 snapshots / 127 graphs / 127 embeds / zero_byte=0 / `integrity_ok`.
+
+**Zip dry-run:** 8 files, unpacked **5594** B, sha256 `8829a00049986f728588b0dea66956005df7934b06d0f8f16d4c19d89efb573b`.
 
 Also notable: `rich_3882` alone had **69** `edit_file` calls in P3.5 (edit thrash / loops).
 
@@ -132,15 +179,16 @@ Serve parity (P0.6): A6000 48GB, vLLM 0.31.0, load ~65–100s, FlashInfer sample
 
 ## 8. Official submission status
 
-| Field | Value |
-| --- | --- |
-| First submit | 2026-10-06 22:21 UTC |
-| Zip SHA256 | `b92db00d1f7cb64d8ddeb0a045634e632e0582790165a803b89e0cf7ef0c363e` |
-| Message | GATE_P2 smoke 0.20 v12 |
-| Status (as of notes) | **PENDING** (past ~12h wall — expect score or hard-stop partial) |
-| Daily limit | 1/day |
+| Field | P2.7 | P3.8 (latest) |
+| --- | --- | --- |
+| Submitted | 2026-10-06 22:21 UTC | 2026-10-07 11:27 UTC |
+| Ref | `56892002` | `56909388` |
+| Zip SHA256 | `b92db00d…0c363e` | `c3136b1ba5ed90e0d0a08298cfb169ac8fd8db91d04f55cdf9ea614eb18d6cb2` |
+| Message | GATE_P2 smoke 0.20 v12 | wall-4min kept stack |
+| Status | **PENDING** | **PENDING** |
+| Daily limit | 1/day — **0 remaining today** | |
 
-**Next-submit engineering notes:** lower mean wall (3–4 min caps or fewer calls) so 120 tasks finish under 12h; ship kept stack (P3.2+P3.3+graph-first+baseline), not community budgets.
+**Next after scores:** Kaggle `dev` (35) Pass@1 on kept+wall-4 if smoke holds; soft edit-hygiene only if failed_edit still blocks GATE_P3.
 
 ---
 
@@ -148,13 +196,13 @@ Serve parity (P0.6): A6000 48GB, vLLM 0.31.0, load ~65–100s, FlashInfer sample
 
 Paths under `gemma4-agent/agent/`:
 
-- `eval_config.yaml` — baseline 300 / 60 / 5 / 80
+- `eval_config.yaml` — 300 / 60 / **4** / 80 (P3.8 wall A/B)
 - `configs/sampling.yaml` — temp **0.0**, max_out 2048, thoughts false
-- `skills/patch-rules` — `/tmp` repro + host `old_string`/`new_string` + max 3 edits/file, 5/task (P3.2+P3.2b)
+- `skills/patch-rules` — `/tmp` repro + exact `old_str` (P3.2; P3.2b thrash/host-arg caps reverted)
 - `skills/debug-workflow` — repro before edit (P3.2)
-- `skills/anti-loop` — edit-by-12 + budget discipline + edit thrash stop (P3.3+P3.2b)
+- `skills/anti-loop` — edit-by-12 + budget discipline (P3.3; P3.2b thrash stop reverted)
 - `skills/nav-rules` — **graph-first** (P3.5 grep-first reverted)
-- `prompts/system.md` — G11 + edit-by-12 + host edit args + max 5 edits/task
+- `prompts/system.md` — G11 + edit-by-12 (no max-5 / host-arg hardcoding)
 
 Zip boundary: **`agent/` only** (G5).
 
@@ -167,6 +215,7 @@ Zip boundary: **`agent/` only** (G5).
 3. Authlib-missing RunPod run → fake 0.0 in ~5s/task — always check wall time / error diversity before citing.
 4. Laptop→SSH model copy wastes GPU $; direct S3 (presign/sync) required.
 5. Smoke n=10 is **noisy** (P2.6 0.20 vs baseline re-run 0.10 same budgets).
+6. Hardcoding host `old_string`/`new_string` + max-5 edit caps (P3.2b) **worsened** tool-arg hygiene — model often omitted `old_string` or put span text as a key; failed_edit 0.65→0.91; Pass@1 0.20→0.10.
 
 ---
 
@@ -174,7 +223,7 @@ Zip boundary: **`agent/` only** (G5).
 
 - [ ] Public LB score for ≥1 zip
 - [ ] Pass@1 on **`dev` (35)** for kept stack + key ablations
-- [ ] Failed_edit / loop rates on **P3.2-only** traces (not P3.5 proxy)
+- [x] Failed_edit / loop rates on **kept (P3.7)** traces (not only P3.5 proxy) — see §6 re-measure
 - [ ] Replicate community vs baseline on same provider
 - [ ] Peak-token / refuse rates logged per run
 - [ ] Optional: training chapter (DoRA/GRPO) — only after GATE_TRAIN path
@@ -189,14 +238,20 @@ Zip boundary: **`agent/` only** (G5).
 | Experiment log | `docs/experiment_log.md` |
 | GATE_P3 | `gemma4-agent/results/gate_p3_review.json` |
 | Budget Pareto | `gemma4-agent/results/budget_pareto.json` |
-| Loc Hit@k | `gemma4-agent/results/loc_hitk.json` |
+| Loc Hit@k (earlier) | `gemma4-agent/results/loc_hitk.json` |
+| Loc Hit@k smoke/dev | `results/p3_metrics_batch/loc_hitk_{smoke,dev}.json` (+ S3) |
+| Trace KPIs (all) | `results/p3_metrics_batch/trace_kpis_all.json` |
+| Classified traces | `results/p3_metrics_batch/p{32b,35,37}_traces_classified.json` |
+| Inventory / zip dry-run | `results/p3_metrics_batch/local_inventory.json`, `submission_dryrun.zip` |
 | Community smoke | `gemma4-agent/results/p31_community_budget_fit_smoke.json` |
 | Baseline Kaggle | `gemma4-agent/results/p31_baseline_kaggle_smoke.json` |
-| P3.3 / P3.2 / P3.5 / P3.7 | `results/p33_smoke.json`, `p32_smoke.json`, `p35_smoke.json`, `p37_smoke.json` |
-| P2.6 / P3.5 / P3.7 traces | `results/smoke_traces/`, `p35_traces/`, `p37_traces/` |
+| P3.3 / P3.2 / P3.5 / P3.7 / P3.2b | `results/p33_smoke.json`, `p32_smoke.json`, `p35_smoke.json`, `p37_smoke.json`, `p32b_smoke.json` |
+| Traces | `results/smoke_traces/`, `p35_traces/`, `p37_traces/`, `p32b_traces/` (+ S3 `results/trace_exports/`) |
 | Loc Hit@k script | `gemma4-agent/scripts/measure_loc_hitk.py` |
+| Spot batch scripts | `scripts/spot_p3_metrics_batch.sh`, `spot_p3_optional_batch.sh`, `compute_trace_kpis.py` |
 | Smoke kernel | `moranzavdi/gemma4-p26-smoke-swegemma` (latest ablation tag in notebook) |
 | Agent dataset | `moranzavdi/gemma4-p26-agent-smoke` |
+| S3 metrics prefix | `s3://gemma4-dev-agent-data-650825122703/results/p3_metrics_batch/` |
 
 ---
 
@@ -206,5 +261,9 @@ Zip boundary: **`agent/` only** (G5).
 | --- | --- |
 | 2026-10-07 | Initial dump through GATE_P3 FAIL + P3.7 kickoff |
 | 2026-10-07 | P3.7 keep temp 0.0; skip 0.7; P3.2b edit-arg/thrash caps on Kaggle v19; stand board sync |
+| 2026-10-07 | P3.2b COMPLETE: Pass@1=0.10, failed_edit=0.91 → **revert**; restore P3.2/P3.3/temp0.0/graph-first |
+| 2026-10-07 | Spot CPU P3 metrics + optional batch; kept failed_edit=0.65 (p37); loc Hit@5 smoke/dev logged; Spot terminated; local+S3 synced |
+| 2026-10-07 | **P3.8** wall 5→4 min: smoke kernel v20 RUNNING; daily LB submit `56909388` PENDING |
+| 2026-10-07 | Documented §4 wall checklist: 4 min helps but not guaranteed; next timeout → 3–3.5 min A/B |
 
 *Append new measured rows here when ablations finish; do not invent numbers.*

@@ -9,9 +9,7 @@ description: Stop repeated failing tool calls and enforce budget discipline (edi
 - If the same tool name + args fail twice, change strategy (new query, new file, or stop).
 - Do not re-read the same filepath with the same line range more than twice without a new hypothesis.
 - Cap identical consecutive failing commands; prefer graph/`rg` pivot over dump-and-retry.
-- After two failed `edit_file` attempts on the same span, re-`read_file` the range and copy `old_string` exactly (host arg name) — do not retry the same broken args.
-- If `edit_file` fails for missing/invalid args, fix arg names to `filepath` / `old_string` / `new_string` on the next try only; never spam the same broken call.
-- Hard stop: 5 `edit_file` calls in one task → no more edits; `submit_patch` or stop.
+- After two failed `edit_file` attempts on the same span, re-`read_file` the range and copy `old_str` exactly — do not retry the same broken args.
 
 ## Budget discipline
 - Call `get_status` about every 8 tool calls to check remaining time / calls / turns.

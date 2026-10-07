@@ -75,8 +75,8 @@ KPI thresholds: phase cards in `docs/implementation-roadmap.md`.
 
 | Stream | Tickets |
 | --- | --- |
-| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL` · kept smoke Pass@1=0.20 · no P4/P5 |
-| Active | `P3.2b` (edit thrash / host `old_string`) on Kaggle smoke; await P2.7 public score |
+| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL` · P3.8 wall-4min submitted · smoke v20 RUNNING · no P4/P5 |
+| Active | await P3.8 smoke + LB scores (P2.7 + P3.8); then `dev` Pass@1; if LB wall-timeout → next zip **3–3.5 min** ([paper-notes §4](docs/paper-notes.md)) |
 | Paper | notes only → [`docs/paper-notes.md`](docs/paper-notes.md); decide ~Oct 20 |
 | Blocked | P4 / P5 / `GATE_TRAIN_SHIP` until edit+loop KPIs pass |
 
