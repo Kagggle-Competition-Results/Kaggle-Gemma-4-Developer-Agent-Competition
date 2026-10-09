@@ -30,12 +30,13 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 # GATE_P0 = PASS (task_integrity+split+serve_parity+distill; measured 2026-10-06)
 # GATE_P1 = PASS (usable=111,oracle_tpr=1.0,empty_fpr=0.0; overhead_s=35.5 pin_deps offline >5s accepted)
 # GATE_P2 = PASS (2026-10-06; smoke Pass@1=0.20 kernel v12; zip b92db00d…)
-# GATE_P3 = FAIL (2026-10-07; failed_edit/loops; see results/gate_p3_review.json) — no P4/P5
-# GATE_P4 = (blocked by GATE_P3 FAIL)
-# GATE_TRAIN_SHIP = (blocked by GATE_P3 FAIL)
+# GATE_P3 = FAIL + pivot=scaffold_freeze (2026-10-08; edit KPIs unmet; ≥2 edit-prompt ablations hurt Pass@1)
+# GATE_P4 = PIVOT topology=single skipped=true (2026-10-08)
+# GATE_TRAIN_SHIP = (pending P5; unlocked via P3 FAIL+PIVOT)
 # GATE_P6 = (pending)
-# CLOUD_APPROVAL = expired/idle — gemma4 Spot terminated (2026-10-07); RunPod idle (need API key for GPU)
+# CLOUD_APPROVAL = YES (P5A RunPod ~$0.50/hr; budget_usd_max=80; expires in log)
 # S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
+# SCAFFOLD_FREEZE = zip_sha256=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 (agent/ 2026-10-08)
 ```
 
 ### Status board (read this first)
@@ -44,21 +45,26 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | --- | --- | --- |
 | Phase 0–1 | **DONE** / `GATE_P1=PASS` | usable 111/129; quarantine 18 in `configs/splits.json` |
 | Phase 2 | **DONE** / `GATE_P2=PASS` | smoke 0.20; P2.7 zip submitted |
-| Phase 3 | **IN PROGRESS** / `GATE_P3=FAIL` | kept Pass@1=0.20; edit/loop KPIs fail |
+| Phase 3 | **DONE / PIVOT** / `GATE_P3=FAIL+scaffold_freeze` | freeze kept; unlock P5; no more edit-prompt A/Bs |
 | Harness verify | **2026-10-06.5** | `gemma4-agent/docs/harness_verify.md` + `sandbox/` |
 | Soundness CSV | on S3 | `s3://…/results/soundness.csv` |
-| RunPod / EC2 | **no gemma4 workers** (Spot terminated) | prefer Kaggle L4 for smoke |
+| RunPod / EC2 | **P5.1b-star-r1 COMPLETE** | STaR near-miss ×9 finished; `results/p51b_star_r1/` adds 1 clean non-duplicate row; pod terminated |
 | Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` |
-| Smoke kernel | **v20 RUNNING** (P3.8 wall-4min) | `moranzavdi/gemma4-p26-smoke-swegemma` |
-| Official submit P2.7 | **PENDING** | ref `56892002`; sha `b92db00d…` |
-| Official submit P3.8 | **PENDING** (today) | ref `56909388`; sha `c3136b1b…`; wall 4 min |
-| Paper notes | **updated** | [`docs/paper-notes.md`](./paper-notes.md) |
-| **Kept stack** | P3.2/P3.3 + graph-first + temp 0.0 + **max_time=4** (P3.8) | `gemma4-agent/agent/` |
-| P3 metrics | **DONE** local+S3 | `results/p3_metrics_batch/` · kept failed_edit=0.65 (p37) |
-| Next | pull P3.8 smoke; await LB scores; then Kaggle `dev` Pass@1; no P4/P5 | |
+| Smoke/dev kernel | **v24 COMPLETE** (P3.11 Pass@1=**0.40**) | `moranzavdi/gemma4-p26-smoke-swegemma` |
+| Official submit P2.7 | **ERROR** | ref `56892002`; sha `b92db00d…` |
+| Official submit P3.8 | **ERROR** | ref `56909388` |
+| Official submit | **0.06** (P2.7+P3.8 COMPLETE) · `P3.8d_max_out` submitted via watchdog | confirm Kaggle ref/status in UI before next submit; leaders ~0.17–0.24 |
+| Paper notes | **updated** | [`docs/paper-notes.md`](./paper-notes.md) · plan [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md) |
+| **Kept / FREEZE** | P3.2/P3.3 + graph-first + temp 0.0 + **max_time=4** | zip `105a5e88…`; `agent/` frozen |
+| P3 metrics | **DONE** local+S3 | `results/p3_metrics_batch/` |
+| P3.12 RunPod | **done / reverted** | Pass@1=0.0; force edit-by-12; pod terminated |
+| Phase 4 | **PIVOT** single-agent | skipped analyzer+coder |
+| Phase 5 | **UNLOCKED** | r5c=0.9375; r6 broaden yield≈0.13; STaR r1 recoveries=1/9 but 5 misses env-blocked |
+| Harvest ops | **required reading** | [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md) |
+| Next | fix subprocess harness deps (`inline_snapshot`, `dirty_equals`) → rerun clean harvest labels; merge STaR row after env fix review | |
 | **Wall reminder** | 4 min ≠ guaranteed &lt;12h | if LB timeout → next zip **3–3.5 min** (see paper-notes §4) |
 
-**Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call budget; unlock P4/P5 while GATE_P3=FAIL; assume wall=4 alone finishes 120 tasks under 12h.
+**Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call; edit-prompt churn; multi-agent P4; assume wall=4 alone finishes 120 tasks under 12h.
 
 ---
 
@@ -71,9 +77,22 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | P3.1–P3.3, P3.5, P3.7 | **done** (ablations) | cursor | see paper-notes ledger |
 | P3.2b | **done / reverted** | cursor | Pass@1 0.10; failed_edit 0.91; revert |
 | P3_metrics | **done** | cursor | Spot CPU loc+KPIs+classify+zip dry-run; Spot terminated |
-| **P3.8** | **claimed / kernel v20 + submitted** | cursor | wall 5→4 min; smoke RUNNING; LB pending |
-| GATE_P3 | **FAIL** | — | blocks P4/P5 (kept failed_edit=0.65 still ≫10%) |
-| Paper track | **notes only** | — | `docs/paper-notes.md`; decide ~Oct 20 |
+| P3.8 | **done / keep** | cursor | smoke 0.20; public LB scored 0.06 |
+| P3.9 | **done** | cursor | **dev Pass@1=0.1714** (6/35); failed_edit 0.75 |
+| P3.10 | **done / reverted** | cursor | Pass@1 0.10; bad_arg 0.95; revert |
+| P3.8b | **done / reverted** | cursor | Pass@1 0.10; 3 timeouts; restore wall 4 |
+| **P3.11** | **done** | cursor | Pass@1 **0.40** (4/10); all passes on new IDs; failed_edit=0.45 |
+| **P3.12** | **done / reverted** | cursor | Pass@1 **0.0** RunPod A6000; failed_edit=0.83; bad_arg=0.62; restore P3.8 prompts |
+| **P3.8d_max_out** | **submitted / watch** | cursor | max_output_tokens 8192; confirm final Kaggle ref/status in UI |
+| GATE_P3 | **FAIL + PIVOT** | — | scaffold_freeze; unlock P5 |
+| GATE_P4 | **PIVOT** | — | topology=single; skipped |
+| **P5.0** | **done** | cursor | distillation_policy refreshed |
+| **P5.1a** | **done / FAIL** | cursor | yield=0.0; n_kept=0/40; temp=0.2; wall~1.85h; pod terminated |
+| **P5.1a-r2** | **done** | cursor | yield=0.0; n_kept=0/32; S3+local traces |
+| **P5.1b** | **done / FAIL** | cursor | recoveries=0/8; traces S3+local |
+| **P5.1b-star-r1** | **done** | assistant | recoveries=1/9; 1 clean non-duplicate SFT row; 5 misses missing deps |
+| **P5.1a-r3** | **done** | cursor | yield=0.0; n_kept=0/8 @temp0 |
+| Paper track | **notes + train thesis** | — | `docs/paper-notes.md`; plan on disk |
 
 ---
 
@@ -212,3 +231,107 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-07T11:27:53Z | note | P3.8 | agent=cursor | hash=c3136b1ba5ed90e0 | metrics=kernel=v20_RUNNING,agent_ds=pushed,max_time_min=4,timeout=300,calls=60,turns=80 | next=smoke_results | blocker=none
 2026-10-07T11:27:53Z | done | P3.8_submit | agent=cursor | hash=c3136b1ba5ed90e0d0a08298cfb169ac8fd8db91d04f55cdf9ea614eb18d6cb2 | metrics=ref=56909388,msg=wall_4min_kept_stack,public_score=pending,daily_remaining=0 | next=watch_score+p38_smoke | blocker=none
 2026-10-07T11:40:00Z | note | DOCS | agent=cursor | hash=none | metrics=wall_checklist=paper_notes_s4,reminder=4min_not_enough_if_LB_timeout_try_3_to_3.5 | next=p38_smoke | blocker=none
+2026-10-07T12:11:27Z | done | P3.8 | agent=cursor | hash=c3136b1b | metrics=pass_at_1=0.2,resolved=2/10,failed_edit=0.5,loop_rate=0.4352,vs_p37=0.2,delta=+0.00,keep=1,action=keep_P3.8_wall4,artifact=results/p38_smoke.json | next=lb_or_dev | blocker=none
+2026-10-07T12:19:13Z | claim | P3.9 | agent=cursor | hash=c3136b1b | metrics=split=dev,n=35,stack=kept_wall4,kernel=push | next=kaggle_dev_results | blocker=none
+2026-10-07T12:19:13Z | note | P3.9 | agent=cursor | hash=none | metrics=kernel=moranzavdi/gemma4-p26-smoke-swegemma,agent_ds=pushed,eta_h~3to5 | next=pull_when_complete | blocker=none
+2026-10-07T14:13:14Z | done | P3.9 | agent=cursor | hash=c3136b1b | metrics=pass_at_1=0.1714,resolved=6/35,failed_edit=0.7524,loop_rate=0.3874,session_timeouts~3,artifact=results/p39_dev.json | next=await_LB | blocker=none
+2026-10-08T03:30:53Z | done | P3_autopsy | agent=cursor | hash=none | metrics=p39_no_edit=20/35,p39_bad_arg=0.71,p38_failed_edit=0.50,finding=code_as_json_keys,artifact=results/p39_autopsy.json+gate_p3_refresh.json | next=P3.10 | blocker=none
+2026-10-08T03:30:53Z | claim | P3.10 | agent=cursor | hash=none | metrics=change=soft_edit_hygiene_tool_shape,g3=prompt_skill_only,no_hard_caps=1 | next=kaggle_smoke | blocker=none
+2026-10-08T03:30:53Z | note | P3.10 | agent=cursor | hash=none | metrics=kernel=pushed,vs=p38_0.20,provider=kaggle_not_runpod,runpod_key=missing | next=smoke_results | blocker=none
+2026-10-08T04:16:39Z | done | P3.10 | agent=cursor | hash=none | metrics=pass_at_1=0.1,resolved=1/10,failed_edit=0.9903,bad_arg=0.9515,loop_rate=0.542,vs_p38=0.2,delta=-0.10,keep=0,action=revert_P3.10,artifact=results/p310_smoke.json | next=keep_or_revert | blocker=none
+2026-10-08T04:20:00Z | note | P3.10 | agent=cursor | hash=none | metrics=revert=1,reason=pass_down_and_bad_arg_worse,p38_pass=0.20,p310_pass=0.10,bad_arg=0.95,restored=P3.8_prompts_skills | next=await_LB | blocker=none
+2026-10-08T04:21:00Z | note | LB | agent=cursor | hash=none | metrics=p27=ERROR,p38=ERROR,kaggle_submit_broken=1 | next=when_submit_ok_P3.8b_wall_3to3.5 | blocker=kaggle_submission_infra
+2026-10-08T04:18:39Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=40,provider=runpod,purpose=P3.8b,expires=2026-10-09T23:59:59Z | next=P3.8b | blocker=none
+2026-10-08T04:18:39Z | note | RUNPOD | agent=cursor | hash=none | metrics=api_key_provided=1,auth=403_forbidden,action=skip_runpod_use_kaggle | next=P3.8b_kaggle | blocker=runpod_key_invalid
+2026-10-08T04:18:39Z | claim | P3.8b | agent=cursor | hash=none | metrics=change=max_time_minutes_4_to_3.5,g3=wall_only,provider=kaggle | next=smoke_results | blocker=none
+2026-10-08T04:18:39Z | note | P3.8b | agent=cursor | hash=none | metrics=kernel=pushed,vs_p38=0.20,reason=both_LB_ERROR_tighter_wall | next=smoke_results | blocker=none
+2026-10-08T04:58:15Z | done | P3.8b | agent=cursor | hash=none | metrics=pass_at_1=0.1,resolved=1/10,failed_edit=0.9286,bad_arg=0.8393,vs_p38=0.2,delta=-0.10,keep=1,action=keep_flat_noisy,artifact=results/p38b_smoke.json | next=runpod_or_submit | blocker=none
+2026-10-08T04:58:50Z | note | P3.8b | agent=cursor | hash=none | metrics=revert=1,reason=pass_0.10_and_3_session_timeouts,restored_max_time=4 | next=await_LB_submit | blocker=none
+2026-10-08T04:58:50Z | note | RUNPOD | agent=cursor | hash=none | metrics=auth=ok_with_UA,rest_pods=[],running=0,monitor=noop_shutdown=noop | next= | blocker=none
+2026-10-08T05:04:36Z | done | P3_submit_probe | agent=cursor | hash=9a6f228337c66ed24bd7f0a77bd5f98aa7362b95293e2cac39bb249d80c34f41 | metrics=ref=56935643,status=PENDING,msg=kept_wall4_infra_probe,daily_remaining=0 | next=watch_score | blocker=none
+2026-10-08T05:04:36Z | done | P3_no_edit_dive | agent=cursor | hash=none | metrics=n_no_edit=21/35,past_12=21/21,rg_heavy=18,graph=0,rec=strengthen_edit_by_12,spot=i-0508cb3cf8e1aa131,artifact=results/p39_no_edit_dive.json | next=P3.11 | blocker=none
+2026-10-08T05:04:36Z | done | P3_peak_tokens | agent=cursor | hash=none | metrics=p39_refuse=0,p38_refuse=0,note=cumulative_prompt_tokens_not_peak_ctx | next= | blocker=none
+2026-10-08T05:04:36Z | claim | P3.11 | agent=cursor | hash=none | metrics=smoke_reshuffle_seed42,new_vs_orig=8,kernel=v24 | next=smoke_results | blocker=none
+2026-10-08T05:09:41Z | note | P3.11 | agent=cursor | hash=none | metrics=kernel=v24_RUNNING,watchdog=pid22915 | next=pull_on_complete | blocker=none
+2026-10-08T05:43:40Z | done | P3.11 | agent=cursor | hash=none | metrics=pass_at_1=0.4,resolved=4/10,vs_smoke=0.20,artifact=results/p311_smoke.json | next= | blocker=none
+2026-10-08T09:58:44Z | note | P3.11 | agent=cursor | hash=none | metrics=pass_at_1=0.40,resolved=4/10,passed=fastapi_14794+fastapi_14786+fastapi_14372+rich_3006,all_new_ids=1,failed_edit=0.4545,loop_rate=0.4032,bad_arg=0.0,vs_orig_smoke=0.20,submit_56935643=PENDING | next=edit_by_12_or_await_LB | blocker=none
+2026-10-08T10:04:16Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=40,provider=runpod,purpose=P3.12,sku=RTX_A6000_48GB,expires=2026-10-09T23:59:59Z,note=user_directed_runpod_force_edit_by_12 | next=P3.12 | blocker=none
+2026-10-08T10:04:16Z | claim | P3.12 | agent=cursor | hash=none | metrics=change=force_edit_by_12_prompt_skill,g3=prompt_skill_only,provider=runpod,vs=p38_0.20 | next=deploy | blocker=none
+2026-10-08T10:07:27Z | note | P3.12 | agent=cursor | hash=none | metrics=pod=vavozqkxamo2u1,sku=RTX_A6000_48GB,cost_per_hr=0.53,ssh=194.68.245.56:22002 | next=bootstrap_smoke | blocker=none
+2026-10-08T10:16:13Z | note | P3.12 | agent=cursor | hash=none | metrics=smoke_started=1,pod=vavozqkxamo2u1,ablation=force_edit_by_12 | next=watch_results | blocker=none
+2026-10-08T10:47:07Z | done | P3.12 | agent=cursor | hash=none | metrics=pass_at_1=0.0,resolved=0/10,vs_p38=0.20,delta=-0.20,failed_edit=0.8333,bad_arg=0.625,loop_rate=0.4358,no_edit=4/10,keep=0,action=revert_force_edit_by_12,sku=A6000,pod=vavozqkxamo2u1,artifact=results/p312_smoke.json | next= | blocker=none
+2026-10-08T10:47:07Z | done | P3.12_teardown | agent=cursor | hash=none | metrics=pod=vavozqkxamo2u1,action=terminate,restored=P3.8_prompts_skills | next= | blocker=none
+2026-10-08T10:48:09Z | note | DOCS | agent=cursor | hash=none | metrics=synced=AGENTS+experiment_log_board+paper_notes_s8_s9_s15,stand=P312_reverted_await_LB,cloud=idle | next= | blocker=none
+2026-10-08T10:52:38Z | gate | GATE_P3 | agent=cursor | hash=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 | metrics=failed_edit=0.50_p38,failed_edit_dev=0.75,loop_p38=0.44,pass_smoke=0.20,pass_dev=0.1714,refuse=0,pivot=scaffold_freeze,reason=edit_prompt_ablations_hurt_pass | next=P4_PIVOT | blocker=none
+2026-10-08T10:52:38Z | gate | GATE_P4 | agent=cursor | hash=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 | metrics=topology=single,skipped=true,delta_pass=n/a | next=P5 | blocker=none
+2026-10-08T10:52:38Z | done | SCAFFOLD_FREEZE | agent=cursor | hash=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 | metrics=zip_sha256=105a5e88…,artifact=results/scaffold_freeze.json,plan=docs/scaffold-freeze-train-plan.md | next=P5.0 | blocker=none
+2026-10-08T10:52:38Z | done | P5.0 | agent=cursor | hash=none | metrics=policy=BLOCK_proprietary_ALLOW_self,path=configs/distillation_policy.md | next=P5.1a | blocker=none
+2026-10-08T10:52:38Z | claim | P5.1a | agent=cursor | hash=none | metrics=bon_n=8 | next=scripts | blocker=none
+2026-10-08T10:52:38Z | note | P5.1a | agent=cursor | hash=none | metrics=scripts_present=0,missing=rejection_sample.py+star_correct.py+render_trajectories.py+train_qlora.py,spec=agent-dev-spec_s5 | next=implement_or_blocker | blocker=need_train_scripts
+2026-10-08T10:52:38Z | note | CLOUD_REQUEST | agent=cursor | hash=none | metrics=provider=runpod,purpose=P5A_BoN,sku_hint=RTX_A6000_or_B300_MIG,budget_usd_max_suggest=80,expires_suggest=+48h | next=operator_CLOUD_APPROVAL | blocker=need_cloud_approval
+2026-10-08T10:53:48Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=80,provider=runpod,purpose=P5A,sku_hint=RTX_A6000_or_B300_MIG_~0.50_usd_per_hr,price_target_usd_per_hr=0.50,expires=2026-10-10T10:53:48Z | next=P5.1a | blocker=none
+2026-10-08T10:53:48Z | claim | P5.1a | agent=cursor | hash=none | metrics=bon_n=8,sku_target=~0.50,source=self | next=scripts_then_pod | blocker=none
+2026-10-08T10:56:56Z | note | P5.1a | agent=cursor | hash=none | metrics=pod=b5pflrq4hbbw4s,sku=RTX_A6000,cost_per_hr=0.53,ssh=38.147.83.18:46986,bon_n_pilot=4 | next=bootstrap | blocker=none
+2026-10-08T11:18:11Z | note | P5.1a | agent=cursor | hash=none | metrics=bootstrap_fail=numpy_scipy_py312,fix=pin_numpy_lt2.3_scipy_lt1.15,vllm=0.31.0 | next=bon | blocker=none
+2026-10-08T11:18:48Z | note | P5.1a | agent=cursor | hash=none | metrics=BON_START=1,n=4,temp=0.2,tasks=10,gpu_mem_mib=21068 | next=watch_bon_summary | blocker=none
+2026-10-08T13:13:14Z | done | P5.1a | agent=cursor | hash=none | metrics=yield=0.0,n_kept=0,n_attempts=40,n_tasks=10,n_per_task=4,temp=0.2,wall_s=6669.66,timeout=10,tool_budget=2,turns=1,with_patch=20,no_patch=20,artifact=results/p51a_bon_summary.json,pod=b5pflrq4hbbw4s_terminated | next=P5.1a-r2 | blocker=zero_yield_do_not_scale_N
+2026-10-08T13:14:00Z | note | P5.1a | agent=cursor | hash=none | metrics=raw_traces=LOST_on_terminate,only_summary_local,lesson=sync_traces_s3_before_teardown | next=P5.1a-r2 | blocker=need_persisted_fail_trajs_for_STaR
+2026-10-08T13:18:30Z | claim | P5.1a-r2 | agent=cursor | hash=none | metrics=pool=known_solvable_n8,n=4,temp=0.2,persist=s3 | next=deploy | blocker=none
+2026-10-08T13:37:00Z | note | P5.1a-r2 | agent=cursor | hash=none | metrics=bon_crash=torch_cu130_vs_driver_cuda12.8,fix=reinstall_torch_cu128_restart_bon | next=bon_restart | blocker=none
+2026-10-08T13:20:06Z | note | P5.1a-r2 | agent=cursor | hash=none | metrics=pod=k4j1exrj9u5smw,sku=RTX_A6000,cost_per_hr=0.53,ssh=216.81.151.15:17364,tasks=8,n=4,temp=0.2,persist=s3://…/results/p51a_r2/ | next=bootstrap | blocker=none
+2026-10-08T13:44:00Z | note | P5.1a-r2 | agent=cursor | hash=none | metrics=redeploy=A40_cuda13.2,pod=xei7lgoto64zu6,cost_per_hr=0.49,ssh=194.68.245.74:22045,prev_fail=A6000_cuda12.8_vllm_cu13 | next=bootstrap | blocker=none
+2026-10-08T13:45:54Z | note | P5.1a-r2 | agent=cursor | hash=none | metrics=bootstrap_died=pipefail_nvidiasmi_head,fix=restart_ignore_sigpipe | next=sync | blocker=none
+2026-10-08T15:07:32Z | done | P5.1a-r2 | agent=cursor | hash=none | metrics=yield=0.0,n_kept=0,n_attempts=32,with_patch=32,temp=0.2,wall_s=3946.43,sku=A40,pod=xei7lgoto64zu6_terminated,s3=results/p51a_r2/,artifact=results/p51a_r2_bon_summary.json | next=P5.1b | blocker=zero_yield
+2026-10-08T15:08:30Z | claim | P5.1b | agent=cursor | hash=none | metrics=tasks=8_r2_ids,max_retries=1,error_tail_lines=20,persist=s3 | next=deploy_cuda13 | blocker=none
+2026-10-08T16:30:00Z | claim | P5.1a-r3 | agent=cursor | hash=none | metrics=ablation=BON_TEMPERATURE_0.0,pool=same_8_known_solvable,n=1,purpose=verify_resolve_path | next=deploy_cuda13 | blocker=none
+2026-10-08T15:12:13Z | note | P5.1b | agent=cursor | hash=none | metrics=pod=fzlcuou7od4h0x,sku=A40,cost_per_hr=0.49,cuda=13.0,ssh=63.141.33.142:22170,tasks=8,max_retries=1,error_tail=20,persist=s3://…/results/p51b_star/ | next=bootstrap | blocker=none
+2026-10-08T16:12:56Z | done | P5.1b | agent=cursor | hash=none | metrics=recoveries=0,n_tasks=8,max_retries=1,error_tail_lines=20,wall_s=2039.71,sku=A40,pod=fzlcuou7od4h0x_terminated,s3=results/p51b_star/,artifact=results/p51b_star_summary.json | next=pivot_harvest | blocker=zero_recoveries
+2026-10-08T16:31:04Z | note | P5.1a-r3 | agent=cursor | hash=none | metrics=pod=gt7a9atgrys3ep,sku=A40,cost_per_hr=0.59,cuda=13.2,ssh=194.68.245.238:22079,temp=0.0,n=1,tasks=8,persist=s3://…/results/p51a_r3/ | next=bootstrap | blocker=none
+2026-10-08T17:09:05Z | done | P5.1a-r3 | agent=cursor | hash=none | metrics=yield=0.0,n_kept=0,n_attempts=8,temp=0.0,wall_s=949.38,sku=A40,pod=gt7a9atgrys3ep_terminated,s3=results/p51a_r3/,artifact=results/p51a_r3_bon_summary.json | next=diagnose | blocker=zero_yield_even_temp0
+2026-10-08T17:27:50Z | claim | P5.1_diagnose | agent=cursor | hash=none | metrics=focus=resolve_false_negatives | next=root_cause | blocker=none
+2026-10-08T17:28:53Z | done | P5.1_diagnose | agent=cursor | hash=none | metrics=root=subprocess_skips_install_test_deps,host_lacks_kaggle_wheelhouse,rich_3882_patch_matches_gold_markup_True,p312_same_empty_error,meta_dropped_test_output | next=P5.1a-r4 | blocker=none
+2026-10-08T17:28:53Z | note | P5.1_diagnose | agent=cursor | hash=none | metrics=swegemma=SubprocessManager_noop_install_test_dependencies+install_editable,verify=system_site_packages_only,kaggle=pip_installs_metric_wheelhouse_first,runpod=vllm_only_bootstrap,pytest_fail_path_error_empty=by_design,fix=ensure_subprocess_host_deps_or_SWE_SANDBOX=docker,scripts=rejection_sample+star_correct_now_persist_test_exit+test_output_tail | next=P5.1a-r4 | blocker=none
+2026-10-08T17:28:53Z | claim | P5.1a-r4 | agent=cursor | hash=none | metrics=purpose=reharvest_after_verify_host_fix,pool=same_8,n=1,temp=0.0 | next=bootstrap_host_deps_or_docker | blocker=none
+2026-10-08T17:43:00Z | note | P5.1a-r4 | agent=cursor | hash=none | metrics=oracle_rich_3882=PASS,pytest=8.3.4,starlette=0.46.2,bon_restart=temp0_n1 | next=watch_bon | blocker=none
+2026-10-08T18:19:32Z | done | P5.1a-r4 | agent=cursor | hash=none | metrics=yield=0.75,n_kept=6,n_attempts=8,temp=0.0,wall_s=1059.69,oracle_rich_3882=PASS,fail=rich_3067+rich_3882,pod=4phnu67jvh4e0f_terminated,s3=results/p51a_r4/,artifact=results/p51a_r4_bon_summary.json,kept=fastapi_14372,fastapi_14786,fastapi_14794,rich_3006,rich_3894,rich_3905 | next=P5.1b_or_scale_N | blocker=none
+2026-10-08T17:30:28Z | note | P5.1a-r4 | agent=cursor | hash=none | metrics=pod=4phnu67jvh4e0f,sku=A40,cost_per_hr=0.59,cuda_driver=13.0,ssh=63.141.33.111:22136,purpose=verify_host_fix_then_temp0_bon | next=bootstrap | blocker=none
+2026-10-08T17:43:00Z | note | P5.1a-r4 | agent=cursor | hash=none | metrics=oracle_rich_3882=PASS,pytest=8.3.4,starlette=0.46.2,bon_restart=temp0_n1 | next=watch_bon | blocker=none
+2026-10-09T04:10:36Z | note | LB | agent=cursor | hash=none | metrics=public_score=0.06,ref=56935643,leaders~0.17-0.24,gap=smoke_gt_LB_timeout_hypothesis | next=wall_3to3.5_if_daily_slot | blocker=none
+2026-10-09T04:10:36Z | claim | P5.1a-r5 | agent=cursor | hash=none | metrics=ablation=N_8,temp=0.2,pool=known_solvable_n8,host_deps=1,oracle=rich_3882,persist=s3,strategy=scale_harvest_primary | next=deploy | blocker=none
+2026-10-09T04:12:13Z | note | P5.1a-r5 | agent=cursor | hash=none | metrics=pod=ckz3kkuv985nv1,sku=A40,cost_per_hr=0.59,cuda_driver=12.8,torch=cu128,ssh=63.141.33.53:22076,n=8,temp=0.2 | next=bootstrap | blocker=none
+2026-10-09T04:17:24Z | claim | P3.8c_lb_wall | agent=cursor | hash=none | metrics=ablation=max_time_minutes_4_to_3.5,g3=wall_only,kept=P3.2+P3.3+graph_first+temp0.0,vs_lb=0.06,note=p38b_smoke_regressed_but_lb_stuck_0.06 | next=build_submit | blocker=none
+2026-10-09T04:17:29Z | done | P3.8c_lb_wall | agent=cursor | hash=543a874ed13a9eeef5af0ce1de64e04c8479f0aea1fcbd9c2bad10267b419df6 | metrics=ref=56909388,max_time_minutes=3.5,vs_lb_baseline=0.06,working_tree_restored_wall=4,artifact=/tmp/submission_p38c_wall35.zip | next=watch_score | blocker=none
+2026-10-09T04:18:07Z | note | P3.8c_lb_wall | agent=cursor | hash=543a874ed13a9eeef5af0ce1de64e04c8479f0aea1fcbd9c2bad10267b419df6 | metrics=submit_blocked=1,reason=pending_56935643_must_finish,also_require_filename=submission.zip,zip_ready=results/submission_p38c_wall35.zip,wall=3.5,working_tree_wall=4 | next=resubmit_when_pending_clears | blocker=kaggle_1_pending_cap
+2026-10-09T04:19:39Z | note | COMPETE_AUDIT | agent=cursor | hash=none | metrics=kernel=verracodeguacas/gemma-4-agent-budget-fit-single-agent,lb=0.18,budgets=8min_28calls_timeout240,temp=0.2,max_out=8192,think=4096_on,graph=discouraged,no_skills,our_smoke_p31_community=0.0,artifact=results/competitor_verra_0.18/ | next=consider_max_out_or_budget_package_AB | blocker=none
+2026-10-09T04:25:56Z | claim | P3.8d_max_out | agent=cursor | hash=none | metrics=ablation=max_output_tokens_2048_to_8192,g3=sampling_only,keep_wall4_calls60_temp0,vs_lb=0.06,vs_verra=0.18 | next=build_zip | blocker=none
+2026-10-09T04:25:57Z | note | P3.8d_max_out | agent=cursor | hash=b8e154030329403e3e1a027afe03d32bdbc3d4c68963469aa267e1270e635936 | metrics=zip_ready=results/submission_p38d_maxout8192.zip,submit_blocked_or_fail=1,detail=Traceback (most recent call last):   File "/opt/homebrew/lib/python3.14/site-packages/urllib3/connection.py", line 204, in _new_conn     sock = connection.create_connection(         (self._dns_host, s | next=auto_submit_when_pending_clear | blocker=kaggle_pending_or_error
+2026-10-09T04:27:19Z | note | P5.1a-r5 | agent=cursor | hash=none | metrics=fail=cuda12080_vs_torch_cu130,pod=ckz3kkuv985nv1_gone | next=r5b | blocker=none
+2026-10-09T04:27:19Z | note | P5.1a-r5b | agent=cursor | hash=none | metrics=pod=y96pamfitnrgyy,sku=A40,cost_per_hr=0.59,cuda_driver=13.2,ssh=194.68.245.239:22093,n=8,temp=0.2 | next=bootstrap | blocker=none
+2026-10-09T04:27:00Z | claim | P5.1a-r5b | agent=cursor | hash=none | metrics=pod=y96pamfitnrgyy,n=8,temp=0.2,cuda=13.2 | next=bon_harvest | blocker=none
+2026-10-09T04:42:34Z | done | P5.1a-r5b | agent=cursor | hash=none | metrics=fail=ServerStartupError,cause=torchvision_nms_mismatch_after_torch_force_reinstall_no_deps,oracle=pass,yield=0,pod=y96pamfitnrgyy_terminated,s3=results/p51a_r5b/ | next=P5.1a-r5c | blocker=none
+2026-10-09T04:42:34Z | claim | P5.1a-r5c | agent=cursor | hash=none | metrics=n=8,temp=0.2,fix=repin_torch_torchvision_after_vllm,cuda_min=13 | next=deploy | blocker=none
+2026-10-09T04:44:39Z | note | P5.1a-r5c | agent=cursor | hash=none | metrics=pod=e1a38ndhani8p7,ssh=69.30.85.14:22165,cuda=13.2,cost_per_hr=0.59,torch_index=auto_cu128_or_cu130,tv_fix=1 | next=bootstrap | blocker=none
+2026-10-09T06:45:58Z | done | P5.1a-r5c | agent=cursor | hash=none | metrics=yield=0.9375,n_kept=60,n_attempts=64,temp=0.2,n=8,n_tasks=8,pod=e1a38ndhani8p7_terminated,s3=results/p51a_r5c/ | next=render_or_broaden | blocker=none
+2026-10-09T07:51:57Z | claim | P5.2_filter | agent=cursor | hash=none | metrics=inputs=p51a_r4+p51a_r5c,rules=loop+scratch+peak28k+dedupe+no_holdout | next=P5.5 | blocker=none
+2026-10-09T07:51:57Z | claim | P5.5_render | agent=cursor | hash=none | metrics=script=render_trajectories.py,mask_tool_results=1 | next=dry_run | blocker=none
+2026-10-09T07:51:57Z | claim | P5.1a-r6 | agent=cursor | hash=none | metrics=broaden=train_pool_subset,n=8,temp=0.2,g3=task_pool_only | next=tasklist_then_gpu | blocker=none
+2026-10-09T07:52:17Z | done | P5.2_filter | agent=cursor | hash=none | metrics=n_out=57,n_tasks=8,max_loop_pairs=1,peak_cap=28000,artifact=results/p51_clean/ | next=P5.5 | blocker=none
+2026-10-09T07:52:17Z | done | P5.5_render | agent=cursor | hash=none | metrics=n_rows=57,mask_tool_results=1,out=data_train/sft.jsonl | next=broaden_BoN_before_DoRA | blocker=none
+2026-10-09T07:53:34Z | note | P5.1a-r6 | agent=cursor | hash=none | metrics=pod=w4liq4lp48mbjf,ssh=194.68.245.239:22095,cuda=13.2,cost_per_hr=0.59,n=8,temp=0.2,n_tasks=16,pool=train_pool_wave1,tasks=configs/p51a_r6_tasks.txt | next=bootstrap | blocker=none
+2026-10-09T08:00:49Z | note | P3.8d_max_out | agent=cursor | hash=b8e154030329403e3e1a027afe03d32bdbc3d4c68963469aa267e1270e635936 | metrics=watchdog=scripts/watchdog_p38d_submit.sh,poll_s=120,waiting_clear=56935643,zip=results/submission_p38d_maxout8192.zip | next=auto_submit | blocker=kaggle_1_pending_cap
+2026-10-09T13:31:07Z | done | P5.1a-r6 | agent=cursor | hash=none | metrics=early_stop=1,yield=0.13333333333333333,n_kept=14,n_attempts=105,target=128,temp=0.2,n=8,tasks_with_keepers=2,pod=w4liq4lp48mbjf_terminated,s3=results/p51a_r6/ | next=star_near_miss_or_lb | blocker=none
+2026-10-09T13:32:32Z | claim | P5.2_merge_r6 | agent=cursor | hash=none | metrics=inputs=r4+r5c+r6 | next=P5.5_rerender | blocker=none
+2026-10-09T13:32:32Z | claim | P5.1b-star-r1 | agent=cursor | hash=none | metrics=near_miss_from_r6,patch_gt0,zero_keepers,max_retries=1,error_tail=20 | next=deploy | blocker=none
+2026-10-09T13:32:32Z | done | P5.2_merge_r6 | agent=cursor | hash=none | metrics=n_out=65,n_tasks=9,inputs=r4+r5c+r6 | next=P5.5 | blocker=none
+2026-10-09T13:32:32Z | done | P5.5_render | agent=cursor | hash=none | metrics=n_rows=65,mask_tool_results=1,out=data_train/sft.jsonl,merged_r6=1 | next=P5.1b_star | blocker=none
+2026-10-09T13:34:39Z | note | P5.1b-star-r1 | agent=cursor | hash=none | metrics=pod=4oh9paksutd5x9,ssh=63.141.33.142:22195,cuda=13.0,cost_per_hr=0.59,n_tasks=9,max_retries=1,error_tail=20,source=r6_near_miss | next=bootstrap | blocker=none
+2026-10-09T14:01:51Z | note | P5.1b-star-r1 | agent=cursor | hash=none | metrics=audit_bug=STAR_PREV_ERROR_TAIL_never_injected,fix=problem_statement_inject+keep_copy+missing_task_check,hot_restart=1 | next=monitor | blocker=none
+2026-10-09T14:02:19Z | done | P5.1b-star-r1 | agent=cursor | hash=none | metrics=fail=1,pod=4oh9paksutd5x9_terminated | next=diagnose | blocker=star_fail
+2026-10-09T14:10:44Z | claim | P5.1b-star-r1 | agent=assistant | hash=none | metrics=audit=star_bootstrap_watchdog+harvest_meta+render_provenance | next=fix_and_verify | blocker=none
+2026-10-09T14:12:57Z | done | P5.1b-star-r1 | agent=assistant | hash=none | metrics=py_compile=ok,bash_n=ok,render_smoke_rows=65,render_smoke_tasks=9,fixes=watchdog_status+persist_order+patch_meta+render_provenance | next=redeploy_and_monitor | blocker=none
+2026-10-09T14:17:03Z | note | P5.1b-star-r1 | agent=assistant | hash=none | metrics=runpod_active_pods=0,s3_tools_synced=1,paths=tools/scripts+tools/gemma4-agent-scripts,next_requires=pod_create | next=redeploy | blocker=none
+2026-10-09T14:31:41Z | note | P5.1b-star-r1 | agent=assistant | hash=none | metrics=pod=1o12qjklzqoaqh,sku=A40,cost_per_hr=0.59,ssh=69.30.85.216:22153,cuda=13.2,bootstrap=running,aws_creds_installed=1,watchdog=local_running | next=monitor_star | blocker=none
+2026-10-09T15:40:12Z | note | P5.1b-star-r1 | agent=assistant | hash=none | metrics=pod_terminated=1,wall_s=3287.96,recoveries=1,keep_clean=1,new_sft_rows=1,new_unique_task=fastapi_11194,exact_dup_vs_sft=0,missing_dep_misses=5,import_error_misses=1,assertion_fail_misses=2 | next=fix_subprocess_harness_deps | blocker=none
+2026-10-09T15:43:00Z | claim | P5.1_host_deps | agent=assistant | hash=none | metrics=target=subprocess_harvest_env,missing=inline_snapshot+dirty_equals,source=sandbox_extras_txt | next=patch_and_verify | blocker=none
+2026-10-09T15:48:13Z | done | P5.1_host_deps | agent=assistant | hash=none | metrics=unit_tests=2_pass,py_compile=ok,dry_run=online_inline_snapshot+dirty_equals,clean_venv=pytest+inline_snapshot+dirty_equals+h11_ok,s3_sync=tools/scripts+tools/gemma4-agent-scripts | next=rerun_harvest_with_clean_env | blocker=none
+2026-10-09T15:03:00Z | done | P3.8d_max_out | agent=cursor | hash=b8e154030329403e3e1a027afe03d32bdbc3d4c68963469aa267e1270e635936 | metrics=ref=(self._dns_host,,max_output_tokens=8192,submitted=1,auto=1 | next=watch_score | blocker=none

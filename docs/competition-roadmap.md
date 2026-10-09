@@ -98,12 +98,12 @@ Other classics: all-or-nothing patches; 12h timeout; edit fragility; graph holes
 
 ## 7. Next actions (this week)
 
-1. Join Kaggle + accept rules.  
-2. Team ≤5 / roles.  
-3. Download data; start Phase 0–1 KPIs.  
-4. Ship MVP zip with sane budgets; first submit.  
-5. Paper track decision by ~Oct 20 if pursuing.  
-6. Watch Discussions for distillation policy.
+1. Check Kaggle status for the `P3.8d` max-out submit and log the final ref/result cleanly.
+2. Fix subprocess harvest deps so `inline_snapshot` and `dirty_equals` exist in the wheelhouse path.
+3. Re-run broadened BoN/STaR only after oracle + deps are clean; current `P5.1b-star-r1` added **1** real new row but 5/8 misses were env-blocked.
+4. DoRA only if keepers + task diversity grow materially and `dev` Δ Pass@1 ≥ +0.05.
+5. Renew `CLOUD_APPROVAL` if past 2026-10-10; paper ~Oct 20 — [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md).
+6. No more edit-prompt scaffold ablations; P4 multi-agent skipped.
 
 ---
 

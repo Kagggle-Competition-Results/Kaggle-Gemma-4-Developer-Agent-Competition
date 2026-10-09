@@ -62,7 +62,8 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | `GATE_P0` | Phase 1 |
 | `GATE_P1` | Phase 2 |
 | `GATE_P2` | Phase 3 |
-| `GATE_P3` | Phase 4 (optional) or Phase 5 |
+| `GATE_P3` PASS | Phase 4 (optional) or Phase 5 |
+| `GATE_P3` FAIL+`pivot=scaffold_freeze` | Phase 4 PIVOT (single) → Phase 5 (edit KPIs unmet; scaffold frozen) |
 | `GATE_P4` PASS or PIVOT | Scaffold freeze → Phase 5 |
 | `GATE_TRAIN_SHIP` | Phase 6 training finalist path |
 | `GATE_P6` | Official final selection / submit |
@@ -75,10 +76,10 @@ KPI thresholds: phase cards in `docs/implementation-roadmap.md`.
 
 | Stream | Tickets |
 | --- | --- |
-| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL` · P3.8 wall-4min submitted · smoke v20 RUNNING · no P4/P5 |
-| Active | await P3.8 smoke + LB scores (P2.7 + P3.8); then `dev` Pass@1; if LB wall-timeout → next zip **3–3.5 min** ([paper-notes §4](docs/paper-notes.md)) |
-| Paper | notes only → [`docs/paper-notes.md`](docs/paper-notes.md); decide ~Oct 20 |
-| Blocked | P4 / P5 / `GATE_TRAIN_SHIP` until edit+loop KPIs pass |
+| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL+PIVOT` · `GATE_P4=PIVOT` single · freeze · LB **0.06** · wall 4 |
+| Active | **P5.1b-star-r1** complete: 1 clean new STaR keeper from 9 r6 near-misses; clean SFT still **65/9 tasks** pending harness-dep fix; **P3.8d** submit/watch on deck |
+| Paper | notes + train thesis → [`docs/paper-notes.md`](docs/paper-notes.md); plan [`docs/scaffold-freeze-train-plan.md`](docs/scaffold-freeze-train-plan.md); competitor 0.18 → [`gemma4-agent/docs/competitor_verra_0.18.md`](gemma4-agent/docs/competitor_verra_0.18.md) |
+| Blocked | edit-prompt A/Bs; multi-agent P4; DoRA until train_pool keepers grow materially; skip oracle on RunPod; subprocess harness deps (`inline_snapshot`, `dirty_equals`) missing |
 
 ---
 

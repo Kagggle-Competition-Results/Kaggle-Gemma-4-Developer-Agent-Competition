@@ -4,9 +4,11 @@
 
 **Competition:** [gemma-4-developer-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent) · Paper: [gemma-4-developer-agent-paper](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper)
 
-**Last updated:** 2026-10-07 (P3.8 wall-4min submitted + smoke v20; GATE_P3 still FAIL)
+**Last updated:** 2026-10-09 (STaR retry path fixed; `P5.1b-star-r1` added 1 clean non-duplicate row but env misses still pollute yield)
 
-**Stand:** GATE_P2 PASS · GATE_P3 FAIL · P3.2b **reverted** · kept failed_edit **0.65** · **P3.8** wall 5→4 min **submitted** (ref 56909388) · smoke v20 **RUNNING** · P2.7 still **PENDING** · P4/P5 blocked.
+**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · kept freeze · wall **4** · public LB **0.06** · train harvest partially unlocked but env-blocked.
+
+**Plan doc:** [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md)
 
 **Sources of truth:** [`experiment_log.md`](./experiment_log.md) · `gemma4-agent/results/*` · [`agent-dev-spec.md`](./agent-dev-spec.md)
 
@@ -23,7 +25,7 @@
 | Metric | resolution rate; near-miss = 0 (all-or-nothing pytest) |
 | Submit | ADK zip (`agent/` only); ≤1/day; ≤2 finals |
 | Our smoke split | 10 tasks (`configs/splits.json:smoke`) |
-| Our dev split | 35 tasks (not yet used for Pass@1 ablations) |
+| Our dev split | 35 tasks (`configs/splits.json:dev`; Pass@1 **0.1714** on P3.9) |
 
 ---
 
@@ -52,7 +54,12 @@
 | P3.4 / P3.6 | `max_out`↓, `include_thoughts:false` | (folded into P2.6) | — | — | kept | done early for context |
 | P3.7 | `temperature: 0.0` (was 0.2) | Kaggle v18 | **0.20** | 2/10 | **yes** | flat vs 0.2; skip 0.7; keep deterministic 0.0 |
 | P3.2b | host `old_string`/`new_string` + max 5 edits/task | Kaggle v19 | **0.10** | 1/10 | **no** | failed_edit=0.9114; loop=0.5507; revert_P3.2b |
-| P3.8 | `max_time_minutes` **5 → 4** (wall throughput) | Kaggle v20 + LB submit | TBD | TBD | **running** | G3=wall only; kept stack; zip sha `c3136b1b…` |
+| P3.8 | `max_time_minutes` **5 → 4** (wall throughput) | Kaggle v20 + LB submit | **0.20** | 2/10 | **yes** | flat vs kept; failed_edit=0.50; 1× session timeout; zip `c3136b1b…` |
+| P3.9 | same stack on **`dev`** (n=35) | Kaggle v21 | **0.1714** | 6/35 | **baseline** | failed_edit=0.75; ~3 session timeouts; validates smoke≈dev |
+| P3.10 | soft edit: tool-call shape + short `old_string` values (no hard caps) | Kaggle v22 | **0.10** | 1/10 | **no** | −0.10 vs P3.8; failed_edit=0.99; bad_arg=0.95; **revert** |
+| P3.8b | `max_time_minutes` **4 → 3.5** | Kaggle v23 | **0.10** | 1/10 | **no** | −0.10; 3× session timeout; **revert wall to 4** |
+| P3.11 | smoke **reshuffle** seed=42 (8/10 new IDs) | Kaggle v24 | **0.40** | 4/10 | **yes (stability)** | +0.20 vs orig smoke; **all 4 passes on new IDs**; overlap `rich_3480`/`rich_3930` fail; failed_edit=0.45; bad_arg=0 |
+| P3.12 | **force** edit-by-12 (prompt/skill; no schema) | RunPod A6000 | **0.00** | 0/10 | **no** | −0.20 vs P3.8; failed_edit=0.83; bad_arg=0.62; no_edit 4/10 still rg-past-12; **revert** |
 
 ### Per-task highlights (kept vs rejected)
 
@@ -62,6 +69,10 @@
 
 **P3.5 grep-first (0.10):** lost `rich_3882` vs P3.2; still solved `rich_3905`.
 
+**P3.11 reshuffle (0.40):** passes `fastapi_14794`, `fastapi_14786`, `fastapi_14372`, `rich_3006` (all new vs orig smoke); overlap fails `rich_3480`, `rich_3930`.
+
+**P3.12 force edit-by-12 (0.00):** 0/10; lost prior solves `rich_3882`/`rich_3905` (non-empty patches, unresolved); no_edit 4/10 still rg-past-12; failed_edit=0.83; bad_arg=0.62 → **revert**.
+
 ---
 
 ## 4. Budgets & 12h host clock
@@ -70,7 +81,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | community_budget_fit | 240 | 28 | 8 | 80 | 0.00 | **5.83** (mean wall) |
 | baseline (pre-P3.8) | 300 | 60 | 5 | 80 | 0.10–0.20 | not remeasured on Kaggle wall |
-| **P3.8 wall-4min (shipped)** | 300 | 60 | **4** | 80 | TBD (smoke v20) | target: more tasks under 12h LB |
+| **P3.8 wall-4min (shipped)** | 300 | 60 | **4** | 80 | **0.20** | keep; LB still PENDING; extrap TBD from mean wall |
 
 **Host implication:** `5 min × 120 ≈ 10h` agent time alone + load/overhead → easy to approach/exceed **12h** official scoring. First public submit (P2.7, 2026-10-06) still `PENDING` after ~12–15h — likely wall overrun and/or scorer backlog; treat long PENDING as a **throughput** signal, not only model quality.
 
@@ -150,7 +161,9 @@ Artifacts: `gemma4-agent/results/p3_metrics_batch/trace_kpis_all.json` (+ S3 sam
 | p35 (rejected) | + grep-first | 0.9709 | 0.4542 | 0.9709 | 103 |
 | p32b (rejected) | + host-arg / max-5 caps | 0.9114 | 0.5507 | 0.9114 | 79 |
 
-Kept stack still fails GATE_P3 edit thresholds (&lt;10% / ≤½ P2). Prefer **p37** over P3.5 proxy for paper claims. Soft edit hygiene next — not hard caps (P3.2b hurt).
+Kept stack still fails GATE_P3 edit thresholds (&lt;10% / ≤½ P2). Prefer **p38/p39** over P3.5 proxy for paper claims.
+
+**Autopsy (2026-10-08):** `results/p39_autopsy.json` — on `dev`, **20/35 never call `edit_file`**; among edits, **bad_arg≈0.71** often = source text used as JSON **keys** instead of `old_string` values. Soft fix = P3.10 (no hard thrash caps). GATE refresh: `results/gate_p3_refresh.json` still **FAIL**.
 
 **Loc Hit@5 (offline, Spot+local):** smoke lex **0.50** / graph **0.40** (n=10); **dev** lex **0.4286** / graph **0.2857** (n=35). Both &lt;60% → diagnostic still says grep-first, but Pass@1 A/B already rejected that (keep graph-first).
 
@@ -179,16 +192,31 @@ Serve parity (P0.6): A6000 48GB, vLLM 0.31.0, load ~65–100s, FlashInfer sample
 
 ## 8. Official submission status
 
-| Field | P2.7 | P3.8 (latest) |
-| --- | --- | --- |
-| Submitted | 2026-10-06 22:21 UTC | 2026-10-07 11:27 UTC |
-| Ref | `56892002` | `56909388` |
-| Zip SHA256 | `b92db00d…0c363e` | `c3136b1ba5ed90e0d0a08298cfb169ac8fd8db91d04f55cdf9ea614eb18d6cb2` |
-| Message | GATE_P2 smoke 0.20 v12 | wall-4min kept stack |
-| Status | **PENDING** | **PENDING** |
-| Daily limit | 1/day — **0 remaining today** | |
+| Field | P2.7 | P3.8 | Probe (kept wall4) |
+| --- | --- | --- | --- |
+| Submitted | 2026-10-06 22:21 UTC | 2026-10-07 11:27 UTC | 2026-10-08 05:01 UTC |
+| Ref | `56892002` | `56909388` | `56935643` |
+| Zip SHA256 | `b92db00d…` | `c3136b1b…` | `9a6f2283…` |
+| Message | GATE_P2 smoke 0.20 v12 | wall-4min kept stack | infra probe kept wall4 |
+| Status | **ERROR** | **ERROR** | **submitted via watchdog; verify final Kaggle ref/status in UI** |
+| Daily limit | 1/day — do not resubmit until probe resolves | | |
 
-**Next after scores:** Kaggle `dev` (35) Pass@1 on kept+wall-4 if smoke holds; soft edit-hygiene only if failed_edit still blocks GATE_P3.
+**Local / cloud eval (not LB):** smoke kept **0.20**; reshuffle **0.40** (P3.11); `dev` **0.1714** (P3.9). Edit/loop GATE_P3 still FAIL.
+
+**Next:** fix subprocess harvest deps, then re-run broadened harvest/STaR under a clean oracle path. No DoRA until keepers and task coverage grow materially.
+
+### Scaffold ceiling → train thesis
+
+Prompt/skill levers for edit hygiene and force-edit-by-12 repeatedly **lowered** Pass@1 while GATE_P3 edit/loop thresholds stayed unreachable. LB only scores resolve rate. Therefore freeze the best single-agent scaffold and attack no_edit / bad_arg modes via **self** BoN+STaR → DoRA (r≤64), not more system.md lectures.
+
+### BoN harvest (negative)
+
+| Run | Pool | Kept | Patched | Wall |
+| --- | --- | --- | --- | --- |
+| P5.1a | smoke×N=4 @0.2 | 0/40 | 20/40 | ~1.85 h A6000 |
+| P5.1a-r2 | 8 known-solvable×N=4 @0.2 | **0/32** | **32/32** | ~1.1 h A40 CUDA13.2 |
+
+Even tasks that pass at temp 0.0 did not reliably resolve under BoN temp 0.2 before host fixes. **P5.1b STaR** (8 tasks×1 retry, error-tail 20): **0 recoveries**. After fixing retry injection, persist ordering, and patch metadata, **P5.1b-star-r1** (9 r6 near-misses) produced **1/9 recoveries** and **1 clean non-duplicate SFT row**. However, `5/8` unresolved finals were blocked by missing subprocess deps (`inline_snapshot`, `dirty_equals`) plus `1` follow-on import error, so the current harvest miss rate is still not clean enough to scale.
 
 ---
 
@@ -200,9 +228,9 @@ Paths under `gemma4-agent/agent/`:
 - `configs/sampling.yaml` — temp **0.0**, max_out 2048, thoughts false
 - `skills/patch-rules` — `/tmp` repro + exact `old_str` (P3.2; P3.2b thrash/host-arg caps reverted)
 - `skills/debug-workflow` — repro before edit (P3.2)
-- `skills/anti-loop` — edit-by-12 + budget discipline (P3.3; P3.2b thrash stop reverted)
+- `skills/anti-loop` — edit-by-12 + budget discipline (P3.3; P3.2b thrash + **P3.12 force-edit** reverted)
 - `skills/nav-rules` — **graph-first** (P3.5 grep-first reverted)
-- `prompts/system.md` — G11 + edit-by-12 (no max-5 / host-arg hardcoding)
+- `prompts/system.md` — G11 + soft edit-by-12 (no max-5 / host-arg / force-stop-rg lectures)
 
 Zip boundary: **`agent/` only** (G5).
 
@@ -216,22 +244,61 @@ Zip boundary: **`agent/` only** (G5).
 4. Laptop→SSH model copy wastes GPU $; direct S3 (presign/sync) required.
 5. Smoke n=10 is **noisy** (P2.6 0.20 vs baseline re-run 0.10 same budgets).
 6. Hardcoding host `old_string`/`new_string` + max-5 edit caps (P3.2b) **worsened** tool-arg hygiene — model often omitted `old_string` or put span text as a key; failed_edit 0.65→0.91; Pass@1 0.20→0.10.
+7. Soft “tool-call shape / short old_string” lectures (P3.10) also **hurt** — Pass@1 0.20→0.10; bad_arg 0.25→0.95. Do not keep expanding edit-arg instructions; try other levers (wall, earlier submit, training after GATE).
+8. Harder “force edit-by-12 / stop rg after #12” wording (P3.12) **hurt** Pass@1 0.20→0.00 on RunPod smoke; no_edit fell  but failed_edit/bad_arg rose (0.83 / 0.62). Premature edits ≠ solving.
+9. Self BoN @ temp 0.2 → **yield 0** on smoke (P5.1a) and on known-solvable IDs (P5.1a-r2, 32/32 patched). Do not scale N; use STaR / revisit harvest temp.
 
 ---
 
-## 11. Gaps before a real paper
+## 11. Methods snapshot (draft bullets)
 
-- [ ] Public LB score for ≥1 zip
-- [ ] Pass@1 on **`dev` (35)** for kept stack + key ablations
-- [x] Failed_edit / loop rates on **kept (P3.7)** traces (not only P3.5 proxy) — see §6 re-measure
+**Setup:** Fixed `gemma-4-31b-it-qat-w4a16-ct` on Kaggle ADK (4×L4, 32k). Single-agent zip (`agent/` only). Budgets measured via `eval_config.yaml`. Splits: smoke n=10, `dev` n=35, holdout untouched (G4).
+
+**Procedure:** One-variable ablations (G3). Keep if smoke Pass@1 ≥ baseline (noisy n=10) and not worse on edit KPIs. Confirm stability on `dev` when possible.
+
+**Kept configuration:** compaction `token_threshold=14336`, `max_out=2048`, thoughts off, temp **0.0**, graph-first nav, `/tmp` repro + exact edit hygiene, edit-by-12 + budget discipline, **`max_time_minutes=4`**.
+
+**Primary metrics:** Pass@1; failed_edit / bad_arg / loop rates from traces; offline loc Hit@5; wall extrap for 120 tasks.
+
+## 12. `no_edit` deep dive (P3.9 `dev`, Spot+local 2026-10-08)
+
+Artifact: `results/p39_no_edit_dive.json` (also S3 `results/p3_metrics_batch/`).
+
+| Finding | Value |
+| --- | --- |
+| Unresolved with **zero** `edit_file` | **21/35 (60%)** |
+| Of those, still exploring past tool-call **#12** | **21/21 (100%)** |
+| Ranked cause | **`explore_past_12_rg_heavy` 18**; read-heavy 2; mixed 1 |
+| Mean calls (no_edit) | **56.8** |
+| Mean `rg`/search shell calls | **20.9** |
+| Mean **graph** tool calls | **0.0** |
+
+**Implication:** Dominant miss is **localization thrash in shell search past edit-by-12**, not graph-tool addiction and not (only) edit-arg schema. **P3.12 tested force edit-by-12 → Pass@1 0.0** (reverted). Forcing earlier edits without better localization quality is not free.
+
+## 13. Peak tokens / refuse (logged)
+
+Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
+
+| Split | refuse_rate | note |
+| --- | --- | --- |
+| p39 `dev` | **0.0** | no ContextWindow/refuse strings in traces |
+| p38 smoke | **0.0** | same |
+
+`final_metrics.total_prompt_tokens` is **cumulative** (hundreds of k) — not a single-step peak; do not treat as &gt;32k cliff. Compaction path appears to hold (refuse=0).
+
+## 14. Gaps before a real paper
+
+- [ ] Public LB score for ≥1 kept zip after submit infra stabilized (prior two **ERROR**; max-out submit needs final Kaggle status check)
+- [x] Pass@1 on **`dev` (35)** for kept+wall-4 — **0.1714** (P3.9)
+- [x] Failed_edit / loop rates on kept traces — see §6 + autopsy
 - [ ] Replicate community vs baseline on same provider
-- [ ] Peak-token / refuse rates logged per run
+- [x] Peak-token / refuse rates logged (refuse=0; cumulative totals only)
 - [ ] Optional: training chapter (DoRA/GRPO) — only after GATE_TRAIN path
-- [ ] Error bars / multiple seeds (or at least two smoke reshuffles)
+- [x] Error bars / second smoke — **P3.11 reshuffle Pass@1=0.40** (4/10; all new-ID passes)
 
 ---
 
-## 12. Artifact index
+## 15. Artifact index
 
 | Artifact | Path |
 | --- | --- |
@@ -252,10 +319,16 @@ Zip boundary: **`agent/` only** (G5).
 | Smoke kernel | `moranzavdi/gemma4-p26-smoke-swegemma` (latest ablation tag in notebook) |
 | Agent dataset | `moranzavdi/gemma4-p26-agent-smoke` |
 | S3 metrics prefix | `s3://gemma4-dev-agent-data-650825122703/results/p3_metrics_batch/` |
+| no_edit dive (p39) | `gemma4-agent/results/p39_no_edit_dive.json` |
+| Peak/refuse (p38/p39) | `gemma4-agent/results/p{38,39}_peak_tokens.json` |
+| Autopsy / GATE refresh | `gemma4-agent/results/p39_autopsy.json`, `gate_p3_refresh.json` |
+| Smoke reshuffle split | `gemma4-agent/configs/splits_smoke_reshuffle.json` |
+| P3.11 smoke | `gemma4-agent/results/p311_smoke.json`, `p311_traces/`, `p311_trace_kpis.json` |
+| P3.12 smoke (reverted) | `gemma4-agent/results/p312_smoke.json`, `p312_traces/`, `p312_trace_kpis.json`, `p312_no_edit_dive.json` |
 
 ---
 
-## 13. Changelog for this file
+## 16. Changelog for this file
 
 | Date | Note |
 | --- | --- |
@@ -265,5 +338,25 @@ Zip boundary: **`agent/` only** (G5).
 | 2026-10-07 | Spot CPU P3 metrics + optional batch; kept failed_edit=0.65 (p37); loc Hit@5 smoke/dev logged; Spot terminated; local+S3 synced |
 | 2026-10-07 | **P3.8** wall 5→4 min: smoke kernel v20 RUNNING; daily LB submit `56909388` PENDING |
 | 2026-10-07 | Documented §4 wall checklist: 4 min helps but not guaranteed; next timeout → 3–3.5 min A/B |
+| 2026-10-07 | P3.8 smoke COMPLETE: Pass@1=0.20 **keep**; failed_edit=0.50; await LB |
+| 2026-10-07 | P3.9 **dev** COMPLETE: Pass@1=0.1714 (6/35); P2.7 LB → **ERROR**; P3.8 still PENDING |
+| 2026-10-08 | Autopsy p39/p38 + GATE_P3 refresh FAIL; P3.10 soft-edit smoke v22 QUEUED (no RunPod key; no gemma4 Spot) |
+| 2026-10-08 | P3.10 COMPLETE: Pass@1=0.10, bad_arg=0.95 → **revert** to P3.8 prompts/skills |
+| 2026-10-08 | Submit probe `56935643` PENDING; no_edit dive (60% rg-past-12); refuse=0; P3.11 reshuffle v24 QUEUED |
+| 2026-10-08 | P3.11 COMPLETE: Pass@1=**0.40** (4/10 new-ID solves); failed_edit=0.45; LB probe still PENDING |
+| 2026-10-08 | P3.12 COMPLETE: force edit-by-12 → Pass@1=**0.00** on RunPod A6000 → **revert**; pod terminated |
+| 2026-10-08 | Scaffold FREEZE + GATE_P3 FAIL+PIVOT + GATE_P4 single; P5.0 done; plan `docs/scaffold-freeze-train-plan.md` |
+| 2026-10-08 | **P5.1a** BoN smoke×N=4 @0.2 → yield **0.0**; pod terminated; next P5.1a-r2 known-solvable + S3 persist → STaR |
+| 2026-10-08 | **P5.1a-r2** known-solvable×N=4 → yield **0.0** but 32/32 patched; traces S3+local; next **P5.1b STaR** |
+| 2026-10-08 | **P5.1b** STaR recoveries=**0**/8; pivot harvest (no DoRA yet) |
+| 2026-10-09 | **P5.1b-star-r1** fixed STaR retry injection/persist path → recoveries=**1/9**; 1 clean non-duplicate row; 5 misses blocked by missing subprocess deps |
 
 *Append new measured rows here when ablations finish; do not invent numbers.*
+
+## P5 harvest / LB (2026-10-09)
+
+- LB public **0.06** (infra recovered); leaders ~0.17–0.24. Gap vs smoke still leaves a wall/timeout hypothesis live.
+- BoN resolve false-negatives mostly fixed: RunPod must run `ensure_subprocess_host_deps` + gold oracle before harvest (`gemma4-agent/docs/harvest_runpod.md`).
+- **P5.1a-r5c** yield=0.9375 (60/64). **P5.1a-r6** broadened yield≈0.13 and lifted `data_train/sft.jsonl` to **65 rows / 9 tasks**.
+- **P5.1b-star-r1** finished in `3287.96s`: `recoveries=1/9`, `new_rows=1`, `exact_dup_vs_sft=0`.
+- Immediate DS blocker: add `inline_snapshot` and `dirty_equals` to the subprocess wheel path before more GPU harvest.
