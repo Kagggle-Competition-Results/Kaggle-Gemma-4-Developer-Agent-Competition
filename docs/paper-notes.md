@@ -4,9 +4,9 @@
 
 **Competition:** [gemma-4-developer-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent) · Paper: [gemma-4-developer-agent-paper](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper)
 
-**Last updated:** 2026-10-09 (STaR retry path fixed; `P5.1b-star-r1` added 1 clean non-duplicate row but env misses still pollute yield)
+**Last updated:** 2026-10-12 (P5.1a-r7d done: oracle PASS; 0 keepers / 80 metas; GPU off; SFT **67/11**)
 
-**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · kept freeze · wall **4** · public LB **0.06** · train harvest partially unlocked but env-blocked.
+**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · public baseline **0.18** · wall **4** · SFT **67/11** · P3.15a 12B FAIL · **RunPod off**.
 
 **Plan doc:** [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md)
 
@@ -350,6 +350,7 @@ Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
 | 2026-10-08 | **P5.1a-r2** known-solvable×N=4 → yield **0.0** but 32/32 patched; traces S3+local; next **P5.1b STaR** |
 | 2026-10-08 | **P5.1b** STaR recoveries=**0**/8; pivot harvest (no DoRA yet) |
 | 2026-10-09 | **P5.1b-star-r1** fixed STaR retry injection/persist path → recoveries=**1/9**; 1 clean non-duplicate row; 5 misses blocked by missing subprocess deps |
+| 2026-10-11 | **P3.15a** 12B Pass@1=**0.10** FAIL → keep 31B; **P5.1a-r7b** → **6 keepers** (`rich_2943`) → SFT **67/11**; **P5.1a-r7c** 0 keepers / 27 metas → GPU off |
 
 *Append new measured rows here when ablations finish; do not invent numbers.*
 
@@ -359,4 +360,14 @@ Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
 - BoN resolve false-negatives mostly fixed: RunPod must run `ensure_subprocess_host_deps` + gold oracle before harvest (`gemma4-agent/docs/harvest_runpod.md`).
 - **P5.1a-r5c** yield=0.9375 (60/64). **P5.1a-r6** broadened yield≈0.13 and lifted `data_train/sft.jsonl` to **65 rows / 9 tasks**.
 - **P5.1b-star-r1** finished in `3287.96s`: `recoveries=1/9`, `new_rows=1`, `exact_dup_vs_sft=0`.
-- Immediate DS blocker: add `inline_snapshot` and `dirty_equals` to the subprocess wheel path before more GPU harvest.
+- Host extras pin/preflight hardened 2026-10-11; SFT **66/10**.
+- **P3.15a** 12B exact-0.18 smoke → Pass@1=**0.10** FAIL vs gate 0.14 → keep default **31B**.
+- **P5.1a-r7** contaminated working-tree override → 0 keepers (grep loop on `fastapi_11194`) → aborted.
+- **P5.1a-r7b** freeze-agent BoN (partial, operator stop): **6 keepers** on `rich_2943` (6/8 resolved; **2 unique patches**); `rich_3061` 0/7; 14 tasks remaining. Artifacts: `gemma4-agent/results/p51a_r7b/` + S3 same prefix. Lesson: **never** set `AGENT_OVERRIDE_DIR` to working-tree `agent/`.
+
+### Next steps (ordered)
+
+1. ~~CPU filter/render/merge r7b~~ **done:** SFT **67/11** (+`rich_2943`).
+2. ~~P5.1a-r7c~~ **stopped partial:** keepers=**0**, metas=27 (`rich_3105/3468/3518` 0/8; `rich_3772` 0/3). Artifacts: `gemma4-agent/results/p51a_r7c/`.
+3. **Done:** **P5.1a-r7d** freeze BoN on 10 tasks (non-rich first) finished with oracle PASS, `0/80` keepers, and mixed failure classes (`test_fail`, `timeout`, `test_patch_apply_fail`, `no_submit_patch`). Artifacts: `gemma4-agent/results/p51a_r7d/` and `gemma4-agent/results/p51a_r7d_filtered/`.
+4. Next: CPU autopsy on `r7d` fail classes, then decide targeted rerun vs pool refresh. Freeze agent only; no edit-prompt A/Bs.

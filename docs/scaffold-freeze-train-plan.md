@@ -1,6 +1,6 @@
 # Scaffold-freeze then Train (Path 1)
 
-**Status:** freeze+gates+P5.0 done · **P5.1a-r5c PASS** yield=0.9375 · **P5.1a-r6** broadened yield~0.13 · **P5.1b-star-r1 DONE** recoveries=1/9 · LB public **0.06**
+**Status:** freeze+gates+P5.0 done · **P5.1a-r5c PASS** yield=0.9375 · **P5.1a-r6** broadened yield~0.13 · **P5.1a-r7b** partial with 2 unique `rich_2943` patches merged into SFT · **P5.1a-r7d DONE** yield=0.0 (0/80) · **P5.1b-star-r1 DONE** recoveries=1/9 · LB branches: frozen **0.06** · public notebook **0.18** · P3.13 hybrid **0.13**
 **Canonical ops log:** [`experiment_log.md`](./experiment_log.md)  
 **Harvest ops (agents):** [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md)
 
@@ -38,13 +38,19 @@ flowchart LR
 | **P5.1a-r4** | same 8 | 1 | 0.0 | **0.75 (6/8)** | host pytest+starlette; oracle PASS |
 | **P5.1a-r5c** | same 8 | **8** | **0.2** | **0.9375 (60/64)** | G3 scale-N win after host fix |
 | **P5.1a-r6** | broadened pool | **8** | **0.2** | **~0.13** | broadening added diversity but weak yield |
+| **P5.1a-r7b** | 16-task freeze resume | **8** | **0.2** | partial **6/15 raw** | operator stop after first hit; 2 unique `rich_2943` patches survived merge |
+| **P5.1a-r7c** | remaining 14 | **8** | **0.2** | partial **0/27** | clean persisted stop; no keepers |
+| **P5.1a-r7d** | remaining 10 non-rich first | **8** | **0.2** | **0.0 (0/80)** | oracle PASS; watchdog harvested; pod off; mixed timeout/test/apply failures |
 | **P5.1b-star-r1** | 9 r6 near-misses | STaR | — | **1/9 recoveries** | 1 clean new row; 5 misses were harness-dep blocked |
 
-## LB (2026-10-09)
+## LB Standing
 
-- Public score **0.06** (submit infra partly recovered; leaders ~0.17–0.24).
-- Smoke/dev ≫ LB → likely timeouts/coverage; next zip ablation = **wall 3–3.5 only** if daily slot.
-- Do **not** reopen edit-prompt A/Bs (GATE_P3 pivot).
+- Frozen scaffold public score: **0.06**
+- Public notebook baseline: **0.18**
+- `P3.13` hybrid: **0.13** and therefore a regression vs `0.18`
+- Leaders are already around **0.25**
+- Standing rule: compare future public submits to exact `0.18`, not to `0.06`
+- Do **not** reopen broad prompt-hygiene hybrids on top of the notebook line without single-variable attribution
 
 ## Optimal strategy (GPU RunPod + Kaggle)
 
@@ -55,6 +61,8 @@ flowchart LR
 | **CPU** | `render_trajectories.py` + filter | Unblocks DoRA when keepers grow |
 | **Kaggle** | At most 1 single-variable zip/day | Convert 0.06 → signal without scaffold churn |
 
+Replace the old Kaggle rule mentally with: preserve **0.18** first, then spend at most one daily slot on a single-variable ablation from exact `0.18`.
+
 ## Ops lessons
 
 - Sync `traces/` to S3 **before** terminate.
@@ -62,7 +70,7 @@ flowchart LR
 - Avoid `nvidia-smi | head` under `set -o pipefail`.
 - **Always** `ensure_subprocess_host_deps` + gold `rich_3882` oracle before BoN.
 - STaR watchdog exit must wait for `S3_PERSIST_DONE`, not `STAR_COMPLETE`.
-- Subprocess wheelhouse is still missing `inline_snapshot` and `dirty_equals`; unresolved STaR counts are inflated until that is fixed.
+- Subprocess extras (`inline_snapshot`, `dirty_equals`) must stay on host via `ensure_subprocess_host_deps` + pin; preflight now fails closed if missing.
 
 ## Freeze rules
 
@@ -74,25 +82,27 @@ flowchart LR
 | Step | Ticket | Work | DoD |
 | --- | --- | --- | --- |
 | 1 | P5.0 | distillation policy | **done** |
-| 2 | cloud | `CLOUD_APPROVAL` P5A | **live** to 2026-10-10T10:53:48Z |
+| 2 | cloud | `CLOUD_APPROVAL` P5A | **live** to 2026-10-13T16:33:07Z |
 | 3 | P5.1a–r3 | BoN/STaR under broken verify | **done / FAIL** |
 | 4 | P5.1a-r4 | host deps + temp0 | **PASS** yield=0.75 |
 | 5 | P5.1a-r5c / r6 | BoN N=8 scale + broaden | **done** |
 | 6 | P5.1b-star-r1 | STaR on r6 near-misses | **done** recoveries=1/9 |
-| 7 | P5.2 / P5.5 | Filter + render SFT | **done** 65 rows / 9 tasks; +1 STaR row held out pending env fix |
-| 8 | harness deps | add `inline_snapshot` + `dirty_equals` to subprocess path | unblock clean harvest labels |
-| 9 | P5.6–P5.8 | DoRA r≤64 + dev A/B | Δ Pass@1 ≥ +0.05 abs |
-| 10 | submit | New LB zip if A/B wins | ≤1/day |
+| 7 | P5.2 / P5.5 | Filter + render SFT | **done** 67 rows / 11 tasks (`fastapi_11194` + `rich_2943` merged) |
+| 8 | harness deps | pin+preflight sandbox extras | **done** 2026-10-11 |
+| 8b | P3.15a | exact 0.18 + 12B model-only smoke | zip ready; blocked on approval/slot |
+| 9 | P5.6–P5.8 | DoRA r≤64 + dev A/B | Δ Pass@1 ≥ +0.05 abs (after more keepers) |
+| 10 | submit | New LB zip if A/B wins | ≤1/day from exact 0.18 |
 
 ## Do not
 
 - Multi-agent P4; more edit-prompt ablations; train holdout; ship adapter without A/B; cloud without approval; skip oracle gate; terminate before S3 sync; SFT on 6 trajs alone.
 
 
-## Status 2026-10-09 (DS)
+## Status 2026-10-12 (DS)
 
-- `data_train/sft.jsonl`: **65 clean rows / 9 tasks** from r4+r5c+r6.
-- `results/p51b_star_r1/`: **1 clean new STaR row** (`fastapi_11194`) not yet merged into main SFT pool.
-- `P5.1b-star-r1`: wall `3287.96s`, recoveries `1/9`, exact duplicate vs current SFT `0`.
-- Failure audit on STaR misses: `5` missing-dep (`inline_snapshot` / `dirty_equals`), `1` import-error follow-on, `2` genuine assertion-fail misses.
-- Next DS action: fix subprocess harness deps before spending more GPU on broadened harvest or STaR.
+- `data_train/sft.jsonl`: **67 clean rows / 11 tasks** (`fastapi_11194` STaR + `rich_2943` merge).
+- Host pin/preflight hardened for `inline_snapshot` / `dirty_equals`.
+- Public standing baseline: exact **0.18**; P3.15a 12B model-only zip ready (`results/p315a_018_model_12b_only/`).
+- `P5.1a-r7d`: complete harvest with oracle PASS, **80 metas / 0 keepers**, artifacts in `gemma4-agent/results/p51a_r7d/` and `gemma4-agent/results/p51a_r7d_filtered/`.
+- Pod `esuxchhvwae76g` is off after harvest (`ssh` endpoint refused).
+- Next: CPU autopsy on `r7d` fail classes before another GPU spend; keep default **31B** / freeze agent path.

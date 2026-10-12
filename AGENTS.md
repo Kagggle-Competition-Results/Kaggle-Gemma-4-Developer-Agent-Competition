@@ -30,7 +30,7 @@ Violation = invalid work (discard / revert).
 | G3 One change | One ablation variable per experiment (budget XOR prompt/skill XOR tools XOR adapter). |
 | G4 Holdout | Never peek/tune/train on holdout task IDs. |
 | G5 Zip boundary | Zip = `agent/` only. No IDE config, `scripts/`, or credentials in zip. |
-| G6 Model | Only `gemma-4-31b-it-qat-w4a16-ct`. |
+| G6 Model | Allowed host variants: `31b` / `12b` / `e4b` / `e2b` QAT W4A16. **Default ship+harvest = `gemma-4-31b-it-qat-w4a16-ct`** until a measured model pivot. No mixing variants in one submission. |
 | G7 Gate | Do not start tickets past a closed gate. Check experiment_log. |
 | G8 Claim | Claim ticket in experiment_log before edit; one writer per path. |
 | G9 Stop | On DoD met or blocker: append hand-off and stop. No extras. |
@@ -76,10 +76,10 @@ KPI thresholds: phase cards in `docs/implementation-roadmap.md`.
 
 | Stream | Tickets |
 | --- | --- |
-| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL+PIVOT` · `GATE_P4=PIVOT` single · freeze · LB **0.06** · wall 4 |
-| Active | **P5.1b-star-r1** complete: 1 clean new STaR keeper from 9 r6 near-misses; clean SFT still **65/9 tasks** pending harness-dep fix; **P3.8d** submit/watch on deck |
-| Paper | notes + train thesis → [`docs/paper-notes.md`](docs/paper-notes.md); plan [`docs/scaffold-freeze-train-plan.md`](docs/scaffold-freeze-train-plan.md); competitor 0.18 → [`gemma4-agent/docs/competitor_verra_0.18.md`](gemma4-agent/docs/competitor_verra_0.18.md) |
-| Blocked | edit-prompt A/Bs; multi-agent P4; DoRA until train_pool keepers grow materially; skip oracle on RunPod; subprocess harness deps (`inline_snapshot`, `dirty_equals`) missing |
+| Stand | `GATE_P2=PASS` · `GATE_P3=FAIL+PIVOT` · `GATE_P4=PIVOT` single · public baseline **0.18** · freeze wall 4 · P3.15a 12B FAIL |
+| Active | **P5.1a-r7d DONE**: freeze BoN harvested clean; oracle PASS; **0/80 keepers**; SFT **67/11**; next = CPU autopsy on fail classes before more GPU spend |
+| Paper | notes + train thesis → [`docs/paper-notes.md`](docs/paper-notes.md); plan [`docs/scaffold-freeze-train-plan.md`](docs/scaffold-freeze-train-plan.md); model A/B [`docs/p315-model-size-ablation-plan.md`](docs/p315-model-size-ablation-plan.md) |
+| Blocked | edit-prompt A/Bs; multi-agent P4; DoRA until keepers/task coverage grow; **never** override freeze with working-tree `agent/` |
 
 ---
 
