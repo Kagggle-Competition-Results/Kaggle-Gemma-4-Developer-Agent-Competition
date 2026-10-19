@@ -1,0 +1,42 @@
+{
+  "ticket": "P3.11",
+  "seed": 42,
+  "smoke": [
+    "fastapi_14099",
+    "fastapi_14246",
+    "fastapi_14372",
+    "fastapi_14786",
+    "fastapi_14794",
+    "rich_3006",
+    "rich_3480",
+    "rich_3535",
+    "rich_3676",
+    "rich_3930"
+  ],
+  "baseline": [
+    "fastapi_13786",
+    "fastapi_14609",
+    "fastapi_14616",
+    "fastapi_15800",
+    "rich_3480",
+    "rich_3675",
+    "rich_3882",
+    "rich_3905",
+    "rich_3930",
+    "rich_3944"
+  ],
+  "new_ids": [
+    "fastapi_14099",
+    "fastapi_14246",
+    "fastapi_14372",
+    "fastapi_14786",
+    "fastapi_14794",
+    "rich_3006",
+    "rich_3535",
+    "rich_3676"
+  ],
+  "overlap": [
+    "rich_3480",
+    "rich_3930"
+  ]
+}

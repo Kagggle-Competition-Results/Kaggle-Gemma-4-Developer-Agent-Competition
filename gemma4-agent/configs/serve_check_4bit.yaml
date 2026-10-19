@@ -1,0 +1,13 @@
+# P5.7 — 4-bit W4A16-CT serve-check (agent-dev-spec §5, G6/G14).
+# CLI: python scripts/serve_check_4bit.py --config configs/serve_check_4bit.yaml \
+#        --adapter agent/adapters/<name> --out results/p57_serve_check.json
+
+base_model: gemma-4-31b-it-qat-w4a16-ct
+max_rank: 64
+max_load_seconds: 90
+gen_tokens: 1000
+min_mean_abs_logit_delta: 1.0e-4
+prompts:
+  - "Return a minimal unified diff that fixes the failing test."
+  - "Call submit_patch with a valid patch body."
+seed: 42

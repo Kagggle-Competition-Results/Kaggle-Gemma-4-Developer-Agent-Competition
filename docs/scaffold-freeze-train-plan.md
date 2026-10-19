@@ -1,7 +1,7 @@
 # Scaffold-freeze then Train (Path 1)
 
-**Status:** freeze+gates+P5.0 done · **P5.1a-r5c PASS** yield=0.9375 · **P5.1a-r6** broadened yield~0.13 · **P5.1a-r7b** partial with 2 unique `rich_2943` patches merged into SFT · **P5.1a-r7d DONE** yield=0.0 (0/80) · **P5.1b-star-r1 DONE** recoveries=1/9 · LB branches: frozen **0.06** · public notebook **0.18** · P3.13 hybrid **0.13**
-**Canonical ops log:** [`experiment_log.md`](./experiment_log.md)  
+**Status snapshot:** freeze+gates+P5.0 done · **P5.1a-r5c PASS** yield=0.9375 · **P5.1a-r6** broadened yield~0.13 · **P5.1a-r7b** partial with 2 unique `rich_2943` patches merged into SFT · **P5.1a-r7d DONE** yield=0.0 (0/80) · **P5.1b-star-r1 DONE** recoveries=1/9 · LB branches: frozen **0.06** · public notebook **0.18** · P3.13 hybrid **0.13**
+**Single source of truth for live status:** [`experiment_log.md`](./experiment_log.md)
 **Harvest ops (agents):** [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md)
 
 ## Decision (locked)
@@ -102,7 +102,19 @@ Replace the old Kaggle rule mentally with: preserve **0.18** first, then spend a
 
 - `data_train/sft.jsonl`: **67 clean rows / 11 tasks** (`fastapi_11194` STaR + `rich_2943` merge).
 - Host pin/preflight hardened for `inline_snapshot` / `dirty_equals`.
-- Public standing baseline: exact **0.18**; P3.15a 12B model-only zip ready (`results/p315a_018_model_12b_only/`).
+- Public standing baseline: exact **0.18**; `P3.15a` 12B model-only smoke **FAIL** (`Pass@1=0.10`) so default stays **31B**.
 - `P5.1a-r7d`: complete harvest with oracle PASS, **80 metas / 0 keepers**, artifacts in `gemma4-agent/results/p51a_r7d/` and `gemma4-agent/results/p51a_r7d_filtered/`.
 - Pod `esuxchhvwae76g` is off after harvest (`ssh` endpoint refused).
 - Next: CPU autopsy on `r7d` fail classes before another GPU spend; keep default **31B** / freeze agent path.
+
+## Path To 0.25 (after any hypothetical `P3.15b` read)
+
+Treat `P3.15b` as a final 12B keep/kill read only, not the main climb path. If it does not beat or clearly de-risk the **31B** line, stop public model-size churn immediately and return to the locked 31B training path:
+
+1. CPU autopsy `P5.1a-r7d` fail classes and choose exactly one repair axis.
+2. Re-run clean **31B** freeze BoN/STaR on the repaired axis to grow keeper/task coverage.
+3. Re-filter/render into `data_train/sft.jsonl`; do not start DoRA on a tiny incremental bump.
+4. Run **P5.6 DoRA SFT** (`r<=64`) only after keeper growth is material.
+5. Run **P5.7/P5.8** 4-bit serve check + dev A/B; only then spend the next scoring slot.
+
+Interpretation: the next realistic path from **0.18** toward **0.25** is better 31B post-training data plus adapter A/B, not an open-ended sequence of `P3.x` public probes.

@@ -1,0 +1,37 @@
+# P5.19–21 Plan A TIES merge — agent-dev-spec §5–§6 (G14 rank≤64).
+# CLI: python scripts/merge_adapters.py --config configs/merge_ties.yaml \
+#        --out agent/adapters/master_swe_adapter
+# Plan A: TIES (DARE ablate). Must pass P5.7 4-bit serve-check before ship.
+# Plan B: skip merge; serve multiple r≤64 adapters via vLLM LoRA.
+
+method: ties  # Plan A
+# DARE-style magnitude trim density (keep top fraction by |delta|); ablate rest.
+density: 0.2
+# Optional per-adapter weights (same order as --adapters / adapters:). Empty → uniform.
+weights: []
+# Sign consensus: majority vote across adapters for each parameter.
+sign_consensus: majority
+# Drop parameters whose elected sign disagrees with an adapter's sign (disjoint merge).
+disjoint: true
+
+base_model: gemma-4-31b-it-qat-w4a16-ct
+# Empty → $MODEL_PATH / /models/gemma-4-31B-it-qat-w4a16-ct
+model_path: ""
+# Reference dtype for dequant / PEFT delta merge math (not the CT pack itself).
+reference_dtype: bfloat16
+
+# Adapter inputs (override with --adapters). Each must be PEFT/DoRA r∈{32,64}.
+adapters: []
+max_rank: 64
+
+# W4A16-CT handling (Plan A path):
+# 1) Prefer PEFT-delta TIES in adapter space, then apply to a bf16/fp16 reference
+#    clone of the instruction weights when available.
+# 2) If only compressed-tensors w4a16-ct weights exist: dequant → TIES on dense
+#    deltas → requant/repack to w4a16-ct on the train host (not done in --dry-run).
+# 3) Plan B fallback: do not merge; load adapters with vLLM LoRA beside the CT base.
+w4a16_ct_mode: peft_delta_then_apply  # | dequant_ties_requant | plan_b_multi_lora
+
+# Output adapter / merged artifact directory (--out overrides).
+output: agent/adapters/master_swe_adapter
+seed: 42

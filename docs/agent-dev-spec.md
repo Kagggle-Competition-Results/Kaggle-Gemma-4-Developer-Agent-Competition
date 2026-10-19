@@ -1,6 +1,6 @@
 # Agent Development Spec — Executable Contracts
 
-Companion to [`implementation-roadmap.md`](./implementation-roadmap.md) and [`AGENTS.md`](../AGENTS.md).
+Companion to [`implementation-roadmap.md`](./implementation-roadmap.md) and [`AGENTS.md`](../AGENTS.md). Live status and hand-offs are tracked only in [`experiment_log.md`](./experiment_log.md).
 
 **Purpose:** I/O, schemas, templates, ownership, and CLIs so any agent can implement tickets without inventing interfaces. **Host schema wins** over templates.
 

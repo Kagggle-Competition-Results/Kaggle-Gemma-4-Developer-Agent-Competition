@@ -10,7 +10,8 @@
 
 **Plan doc:** [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md)
 
-**Sources of truth:** [`experiment_log.md`](./experiment_log.md) · `gemma4-agent/results/*` · [`agent-dev-spec.md`](./agent-dev-spec.md)
+**Single source of truth for live status:** [`experiment_log.md`](./experiment_log.md)
+**Supporting references:** `gemma4-agent/results/*` · [`agent-dev-spec.md`](./agent-dev-spec.md)
 
 ---
 
@@ -371,3 +372,4 @@ Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
 2. ~~P5.1a-r7c~~ **stopped partial:** keepers=**0**, metas=27 (`rich_3105/3468/3518` 0/8; `rich_3772` 0/3). Artifacts: `gemma4-agent/results/p51a_r7c/`.
 3. **Done:** **P5.1a-r7d** freeze BoN on 10 tasks (non-rich first) finished with oracle PASS, `0/80` keepers, and mixed failure classes (`test_fail`, `timeout`, `test_patch_apply_fail`, `no_submit_patch`). Artifacts: `gemma4-agent/results/p51a_r7d/` and `gemma4-agent/results/p51a_r7d_filtered/`.
 4. Next: CPU autopsy on `r7d` fail classes, then decide targeted rerun vs pool refresh. Freeze agent only; no edit-prompt A/Bs.
+5. If a hypothetical `P3.15b` public probe is still taken, treat the score read as a strict 12B keep/kill gate only. The serious path toward **0.25** remains: `r7d` autopsy -> repaired **31B** BoN/STaR -> larger SFT set -> DoRA A/B -> next scoring submit.

@@ -174,7 +174,17 @@ def main() -> int:
         subprocess.run(wheel_cmd, check=True)
 
     if online_reqs:
-        online_cmd = [sys.executable, "-m", "pip", "install", *online_reqs]
+        online_cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--ignore-installed",
+            "--break-system-packages",
+            "--root-user-action",
+            "ignore",
+            *online_reqs,
+        ]
         print("cmd_online", " ".join(online_cmd))
         subprocess.run(online_cmd, check=True)
 
@@ -184,10 +194,55 @@ def main() -> int:
     import pytest
 
     print("ok pytest", getattr(pytest, "__version__", "?"))
+
+    # Hard-pin FastAPI-compatible starlette (never leave 1.x from unconstrained installs).
+    if wheels is not None:
+        pin_ver = "0.46.2"
+        hits = sorted(wheels.glob(f"starlette-{pin_ver}-*.whl"))
+        if hits:
+            pin_cmd = [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--no-deps",
+                "--force-reinstall",
+                "--break-system-packages",
+                "--root-user-action",
+                "ignore",
+                str(hits[0]),
+            ]
+            print("cmd_starlette_pin", " ".join(pin_cmd))
+            subprocess.run(pin_cmd, check=False)
+        # pytest-timeout registers the `timeout` ini option used by some task pytest.ini
+        to_hits = sorted(wheels.glob("pytest_timeout-*.whl")) or sorted(
+            wheels.glob("pytest-timeout-*.whl")
+        )
+        if to_hits:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-deps",
+                    "--force-reinstall",
+                    "--break-system-packages",
+                    "--root-user-action",
+                    "ignore",
+                    str(to_hits[-1]),
+                ],
+                check=False,
+            )
+    try:
+        import starlette
+
+        print("ok starlette", getattr(starlette, "__version__", "?"))
+    except Exception as e:  # noqa: BLE001
+        print("starlette_import_fail", e)
     print(
-        "NOTE: FastAPI tasks still need a compatible starlette on the host. "
-        "Prefer SWE_SANDBOX=docker + gemma4-sandbox:base for harvest, "
-        "or pin starlette via sandbox/pin_deps.py per-task (Docker path)."
+        "NOTE: SubprocessManager must set PYTHONPATH=workspace/src:workspace "
+        "(see scripts/patch_swegemma_subprocess.py)."
     )
     return 0
 

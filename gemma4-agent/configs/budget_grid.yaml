@@ -5,6 +5,7 @@ grids:
   - {time_limit_sec: 180, max_tool_calls: 40, max_turns: 50}
   - {time_limit_sec: 300, max_tool_calls: 60, max_turns: 80}   # P2.6 / P3.7 baseline (5 min)
   - {id: wall_4min, time_limit_sec: 240, max_tool_calls: 60, max_turns: 80}  # P3.8 A/B (eval max_time_minutes=4)
+  - {id: wall_3_5min, time_limit_sec: 210, max_tool_calls: 60, max_turns: 80}  # P3.8b A/B (eval max_time_minutes=3.5)
   - {time_limit_sec: 360, max_tool_calls: 80, max_turns: 100}
   - {time_limit_sec: 480, max_tool_calls: 100, max_turns: 120}
   # Community-measured (verracodeguacas budget-fit): longer wall + hard call cap

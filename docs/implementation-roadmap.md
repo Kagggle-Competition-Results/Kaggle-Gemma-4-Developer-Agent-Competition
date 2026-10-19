@@ -2,7 +2,7 @@
 
 Executable phase cards for coding agents. Read [`AGENTS.md`](../AGENTS.md) first (anti-drift G1–G16).
 
-**Companions:** [`competition-roadmap.md`](./competition-roadmap.md) (contest) · [`agent-dev-spec.md`](./agent-dev-spec.md) (schemas/CLIs/DoD) · [`cloud-ops.md`](./cloud-ops.md) (optional compute) · [`experiment_log.md`](./experiment_log.md)
+**Companions:** [`competition-roadmap.md`](./competition-roadmap.md) (contest) · [`agent-dev-spec.md`](./agent-dev-spec.md) (schemas/CLIs/DoD) · [`cloud-ops.md`](./cloud-ops.md) (optional compute) · [`experiment_log.md`](./experiment_log.md) (single source of truth for live status and hand-offs)
 
 **Locked strategy:** scaffold + budgets + context eviction first → BoN+STaR → DoRA SFT → GRPO → TIES merge (Plan A). SimPO backlog only if GRPO unstable. No PRM. Rank ≤64. Cloud = optional acceleration with operator approval.
 
@@ -232,10 +232,11 @@ Optional companion (same G3 isolation): `top_k: 40` with P3.4 or P3.6 — log as
 
 ### Hard gate
 - **PASS** only if budget extrap holds **and** edit-fail ≤ half of Phase 2 (and &lt;10%) → unlock optional P4 or P5.
-- **FAIL** → no P4/P5.
+- **FAIL** → default: no P4/P5.
+- **PIVOT (operator)** — allowed when all hold: (1) smoke+dev Pass@1 stable vs kept scaffold, (2) refuse_rate=0 and budget extrap OK, (3) ≥2 edit-prompt/skill ablations **hurt** Pass@1 (do not keep churning). Then: freeze scaffold, skip or PIVOT P4, unlock P5. Log `GATE_P3 = FAIL | pivot=scaffold_freeze | next=P4_PIVOT|P5`.
 
 ### Hand-off
-`GATE_P3 = PASS|FAIL | failed_edit=… | loops=… | graph_hit=… | loc_hit_at_5=… | peak_tokens=… | vllm_refuse=… | extrap_h=… | budget_winner=… | next=P4|P5`
+`GATE_P3 = PASS|FAIL | failed_edit=… | loops=… | graph_hit=… | loc_hit_at_5=… | peak_tokens=… | vllm_refuse=… | extrap_h=… | budget_winner=… | pivot=… | next=P4|P5|P4_PIVOT`
 
 ---
 
@@ -248,7 +249,7 @@ Optional companion (same G3 isolation): `top_k: 40` with P3.4 or P3.6 — log as
 Decide if specialized sub-agents beat single-agent by numeric Δ.
 
 ### Prerequisites (hard)
-`GATE_P3 = PASS`. Skip entirely if team chooses single-agent (log `GATE_P4 = PIVOT | topology=single | skipped=true`).
+`GATE_P3 = PASS` **or** `GATE_P3 FAIL+pivot=scaffold_freeze`. Skip entirely if team chooses single-agent (log `GATE_P4 = PIVOT | topology=single | skipped=true`).
 
 ### Must
 - Navigator / patcher / verifier prompts; orchestrator; A/B vs Phase 3 single-agent on `dev` same budgets.
@@ -291,13 +292,13 @@ Decide if specialized sub-agents beat single-agent by numeric Δ.
 ## Phase 5 — Execution-guided post-training
 
 ### Cold-start (read only these)
-1. `AGENTS.md` 2. This phase 3. `agent-dev-spec.md` §§5–6 4. `GATE_P3 = PASS` + scaffold freeze (`GATE_P4` PASS or PIVOT) 5. `cloud-ops.md` if using GPU fleet 6. `distillation_policy.md`
+1. `AGENTS.md` 2. This phase 3. `agent-dev-spec.md` §§5–6 4. `GATE_P3 = PASS` **or** `GATE_P3 = FAIL` with `pivot=scaffold_freeze` + scaffold freeze (`GATE_P4` PASS or PIVOT) 5. `cloud-ops.md` if using GPU fleet 6. `distillation_policy.md`
 
 ### Goal
 Train adapters that raise Pass@1 under 4-bit serve without forgetting or context bloat.
 
 ### Prerequisites (hard)
-Scaffold freeze logged; `GATE_P3 = PASS`; policy current (P5.0).
+Scaffold freeze logged; (`GATE_P3 = PASS` **or** `GATE_P3 = FAIL|pivot=scaffold_freeze`); `GATE_P4` PASS or PIVOT; policy current (P5.0).
 
 ### Must (critical path)
 ```text

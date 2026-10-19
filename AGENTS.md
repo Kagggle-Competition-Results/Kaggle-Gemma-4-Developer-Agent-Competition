@@ -2,9 +2,9 @@
 
 **Read this first.** Then open the **one phase card** you are executing in [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md) and the linked [`docs/agent-dev-spec.md`](docs/agent-dev-spec.md) sections. Do not need chat history.
 
-Human strategy: [`docs/competition-roadmap.md`](docs/competition-roadmap.md). 
-Cloud (only if ticket needs it): [`docs/cloud-ops.md`](docs/cloud-ops.md). 
-Hand-offs: [`docs/experiment_log.md`](docs/experiment_log.md).
+Human strategy: [`docs/competition-roadmap.md`](docs/competition-roadmap.md).
+Cloud (only if ticket needs it): [`docs/cloud-ops.md`](docs/cloud-ops.md).
+Single source of truth for live status and hand-offs: [`docs/experiment_log.md`](docs/experiment_log.md).
 Harness verify / soundness Docker pins: [`gemma4-agent/docs/harness_verify.md`](gemma4-agent/docs/harness_verify.md).
 
 Working tree: `gemma4-agent/`. **Submission zip = `gemma4-agent/agent/` only.**
@@ -77,7 +77,8 @@ KPI thresholds: phase cards in `docs/implementation-roadmap.md`.
 | Stream | Tickets |
 | --- | --- |
 | Stand | `GATE_P2=PASS` · `GATE_P3=FAIL+PIVOT` · `GATE_P4=PIVOT` single · public baseline **0.18** · freeze wall 4 · P3.15a 12B FAIL |
-| Active | **P5.1a-r7d DONE**: freeze BoN harvested clean; oracle PASS; **0/80 keepers**; SFT **67/11**; next = CPU autopsy on fail classes before more GPU spend |
+| Active | **P5.1a-r8_p314a DONE** (A40 `yf44e1spgzegbv`, `S3_PERSIST_DONE`): srcpath+starlette fix; gold **12/12**; Wave1 remaining-11 BoN → **13 keepers**; SFT **71/13** (merge Wave1 keepers still pending). Audit handoff: [`docs/2026-10-18-handoff-audit.md`](docs/2026-10-18-handoff-audit.md) |
+| Next | filter+merge `traces/bon/keep` → SFT (cap 2/task); autopsy zero-yield tasks; optional Docker re-soundness on 5 unlocked quarantine IDs; Wave2 only after merge + CLOUD_APPROVAL |
 | Paper | notes + train thesis → [`docs/paper-notes.md`](docs/paper-notes.md); plan [`docs/scaffold-freeze-train-plan.md`](docs/scaffold-freeze-train-plan.md); model A/B [`docs/p315-model-size-ablation-plan.md`](docs/p315-model-size-ablation-plan.md) |
 | Blocked | edit-prompt A/Bs; multi-agent P4; DoRA until keepers/task coverage grow; **never** override freeze with working-tree `agent/` |
 

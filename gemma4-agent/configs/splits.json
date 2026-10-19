@@ -85,13 +85,8 @@
   ],
   "quarantine": [
     "fastapi_14077",
-    "fastapi_14356",
     "fastapi_15745",
-    "fastapi_15763",
     "fastapi_15785",
-    "requests_6589",
-    "requests_6592",
-    "requests_6629",
     "requests_6757",
     "rich_3064",
     "rich_3130",
@@ -114,6 +109,7 @@
     "fastapi_14266",
     "fastapi_14301",
     "fastapi_14303",
+    "fastapi_14356",
     "fastapi_14360",
     "fastapi_14419",
     "fastapi_14448",
@@ -123,9 +119,13 @@
     "fastapi_14492",
     "fastapi_14953",
     "fastapi_15280",
+    "fastapi_15763",
     "fastapi_5624",
     "fastapi_9555",
     "httpx_3672",
+    "requests_6589",
+    "requests_6592",
+    "requests_6629",
     "requests_6644",
     "requests_7205",
     "requests_7505",
@@ -140,8 +140,17 @@
     "rich_4076",
     "rich_4077"
   ],
-  "notes": "From tasks.jsonl instance_id. 0% overlap. Holdout sacred. Unsound tasks quarantined from P1.1 soundness.csv.",
+  "notes": "From tasks.jsonl instance_id. 0% overlap. Holdout sacred. Unsound tasks quarantined from P1.1 soundness.csv. Unlocked 5 quarantine IDs after srcpath+starlette gold/FAIL_TO_PASS recheck (2026-10-18T03:55:59Z).",
   "n_tasks": 129,
   "quarantine_utc": "2026-10-06T17:30:16Z",
-  "quarantine_source": "results/soundness.csv"
+  "quarantine_source": "results/soundness.csv",
+  "quarantine_unlock_utc": "2026-10-18T03:55:59Z",
+  "quarantine_unlock_source": "results/p51a_r8_p314a/quarantine_gold_unlock_targeted.json",
+  "quarantine_unlock_ids": [
+    "fastapi_14356",
+    "fastapi_15763",
+    "requests_6589",
+    "requests_6592",
+    "requests_6629"
+  ]
 }

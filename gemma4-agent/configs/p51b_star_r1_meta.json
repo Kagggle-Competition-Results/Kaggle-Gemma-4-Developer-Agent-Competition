@@ -1,0 +1,66 @@
+{
+  "ticket": "P5.1b-star-r1",
+  "source": "p51a_r6 near-miss",
+  "n_tasks": 9,
+  "tasks": [
+    "fastapi_11194",
+    "fastapi_13207",
+    "fastapi_14186",
+    "fastapi_14262",
+    "fastapi_14266",
+    "fastapi_14303",
+    "fastapi_14360",
+    "fastapi_14419",
+    "fastapi_14448"
+  ],
+  "selection": "zero_keepers + patch_chars>0; prefer timeout",
+  "max_retries": 1,
+  "error_tail_lines": 20,
+  "per_task": {
+    "fastapi_11194": {
+      "patch_chars": 1644,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 6
+    },
+    "fastapi_13207": {
+      "patch_chars": 5035,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 7
+    },
+    "fastapi_14186": {
+      "patch_chars": 725,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 6
+    },
+    "fastapi_14262": {
+      "patch_chars": 1519,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 1
+    },
+    "fastapi_14266": {
+      "patch_chars": 2814,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 3
+    },
+    "fastapi_14303": {
+      "patch_chars": 1798,
+      "error": "",
+      "sample": 7
+    },
+    "fastapi_14360": {
+      "patch_chars": 3564,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 3
+    },
+    "fastapi_14419": {
+      "patch_chars": 646,
+      "error": "",
+      "sample": 1
+    },
+    "fastapi_14448": {
+      "patch_chars": 3494,
+      "error": "Agent exceeded session timeout (4.0 min)",
+      "sample": 3
+    }
+  }
+}

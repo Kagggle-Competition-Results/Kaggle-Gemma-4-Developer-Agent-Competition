@@ -1,0 +1,74 @@
+# P5.10–13 GRPO — agent-dev-spec §5–§6 (G13 ORM+heuristics only; G14 rank≤64).
+# CLI: python scripts/train_grpo.py --config configs/train_grpo.yaml --out agent/adapters/<name>
+# R = R_exec + R_syntax + R_heuristic - R_penalty
+# Heuristics: +0.1 graph/AST before first edit; -0.2 exact-repeat tool args
+# NO PRM (G13). SimPO is backlog only (P5.SimPO) — not on critical path (G12).
+
+base_model: gemma-4-31b-it-qat-w4a16-ct
+model_path: ""
+
+peft_type: dora
+rank: 64
+lora_alpha: 128
+lora_dropout: 0.05
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+learning_rate: 1.0e-5
+lr_scheduler_type: cosine
+num_train_epochs: 1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 4
+max_seq_length: 24576
+bf16: true
+gradient_checkpointing: true
+gradient_checkpointing_use_reentrant: false
+attn_implementation: sdpa
+
+# GRPO group size G (spec default 4–8 local)
+group_size: 4
+# KL coefficient toward reference / SFT policy
+beta: 0.04
+seed: 42
+
+# Mixed-polarity filter (P5.3d/P5.2c):
+# skip zero-pass (n_resolved==0) and all-pass (n_failed==0) — SFT still trains keepers.
+require_positive_in_group: true
+require_negative_in_group: true
+require_reward_variance: true
+# Legacy ≤0 clamp (superseded by polarity margin on mixed groups).
+clamp_unresolved_advantage: true
+# P5.3f: mixed groups enforce resolved>=+margin and unresolved<=-margin (no 0.0 dead weight).
+enforce_polarity_margin: true
+advantage_margin: 0.05
+# P5.2c: spiral keepers (loop_pairs > 2) cannot be GRPO positive anchors (align filter_bon_keepers).
+max_loop_pairs_positive: 2
+
+# Reward (ORM + rules only). r_exec_pass must dominate bounded heuristics.
+reward:
+  r_exec_pass: 1.0          # ORM: verify_task / meta.resolved
+  r_exec_fail: 0.0
+  r_syntax_ok: 0.1          # valid unified diff with +++ / ---
+  r_syntax_bad: 0.0
+  r_heuristic_graph_before_edit: 0.1
+  r_heuristic_repeat_tool_args: -0.2
+  # R_penalty = lambda_t * tokens + lambda_u * n_tools (spec §6)
+  lambda_t: 1.0e-5
+  lambda_u: 0.01
+
+# Rollout roots for grouping (BoN + STaR). Same task_id pairs across dirs.
+# Override via env GRPO_TRACES (colon-separated).
+traces_roots:
+  - results/p51a_r8_p314a/traces/bon
+  - results/p51b_star_r1/traces/star
+  - results/p51f_star/traces/star
+  - results/p52_wave2_sieve/traces/star
+  - results/p52_wave2_sieve/traces/bon
+assistant_only_loss: true
+load_in_4bit: true

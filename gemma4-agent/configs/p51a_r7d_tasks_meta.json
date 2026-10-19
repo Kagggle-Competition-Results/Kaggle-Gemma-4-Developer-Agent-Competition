@@ -1,0 +1,30 @@
+{
+  "ticket": "P5.1a-r7d",
+  "n": 8,
+  "temp": 0.2,
+  "source": "r7c_resume_after_zero_yield",
+  "n_tasks": 10,
+  "tasks": [
+    "httpx_3672",
+    "requests_6644",
+    "requests_7205",
+    "requests_7505",
+    "fastapi_14492",
+    "fastapi_14953",
+    "rich_3934",
+    "rich_4075",
+    "rich_4076",
+    "rich_4077"
+  ],
+  "skip_zero_yield": [
+    "rich_3105",
+    "rich_3468",
+    "rich_3518"
+  ],
+  "skip_partial": [
+    "rich_3772"
+  ],
+  "r7c_result": "0 keepers / 27 metas",
+  "note": "prefer httpx/requests/fastapi after rich streak misses",
+  "order": "non_rich_first_after_r7c_rich_zero_yield"
+}

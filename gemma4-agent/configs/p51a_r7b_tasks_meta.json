@@ -1,0 +1,39 @@
+{
+  "ticket": "P5.1a-r7b",
+  "n": 8,
+  "temp": 0.2,
+  "source": "train_pool_wave2_plus_r6_leftover",
+  "n_tasks": 16,
+  "tasks": [
+    "rich_2943",
+    "rich_3061",
+    "rich_3105",
+    "rich_3468",
+    "rich_3518",
+    "rich_3772",
+    "rich_3934",
+    "rich_4075",
+    "rich_4076",
+    "rich_4077",
+    "httpx_3672",
+    "requests_6644",
+    "requests_7205",
+    "requests_7505",
+    "fastapi_14492",
+    "fastapi_14953"
+  ],
+  "exclude_keepers": [
+    "fastapi_11194",
+    "fastapi_13537",
+    "fastapi_14372",
+    "fastapi_14786",
+    "fastapi_14794",
+    "rich_3006",
+    "rich_3067",
+    "rich_3882",
+    "rich_3894",
+    "rich_3905"
+  ],
+  "g3": "agent_freeze_resync_only",
+  "reason": "r7 contaminated override + 0 keepers on fastapi_11194 loop"
+}

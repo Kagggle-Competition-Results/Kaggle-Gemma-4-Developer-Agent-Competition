@@ -1,5 +1,6 @@
 # Host schema from HARNESS_README §7.1 / sample_submission
-# P3.8 wall A/B: max_time_minutes 5 → 4 (kept stack otherwise unchanged; G3 = wall only)
+# Kept after P3.8b: wall 3.5 regressed smoke Pass@1 0.20→0.10 (3 session timeouts) → restore 4
+# P3.8c LB zip used 3.5; working-tree freeze restored to 4 pending score
 evaluation:
   timeout_seconds: 300
   max_tool_calls: 60

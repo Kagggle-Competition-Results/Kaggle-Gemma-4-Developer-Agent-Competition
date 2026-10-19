@@ -1,0 +1,28 @@
+{
+  "ticket": "P5.2-wave2-gold-and-sieve",
+  "n": 59,
+  "requests_first": [
+    "requests_6589",
+    "requests_6592",
+    "requests_6629",
+    "requests_7315",
+    "requests_7427"
+  ],
+  "head10": [
+    "requests_6589",
+    "requests_6592",
+    "requests_6629",
+    "requests_7315",
+    "requests_7427",
+    "fastapi_11355",
+    "fastapi_14099",
+    "fastapi_14306",
+    "fastapi_14455",
+    "fastapi_14482"
+  ],
+  "by_repo": {
+    "requests": 5,
+    "fastapi": 35,
+    "rich": 19
+  }
+}

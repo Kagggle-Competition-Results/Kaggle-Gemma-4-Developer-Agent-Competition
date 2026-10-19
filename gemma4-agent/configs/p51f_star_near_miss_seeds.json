@@ -1,0 +1,235 @@
+{
+  "ticket": "P5.1f-star-or-wave2-plan",
+  "note": "Seed near-miss rollouts for STaR planning. Existing scripts/star_correct.py runs attempt0 then injects that attempt error_tail (G11) into problem_statement for attempt1; it does not yet consume these BoN seed metas as attempt0. Operator runs STaR on the 5 task IDs below.",
+  "tasks": [
+    "fastapi_14186",
+    "fastapi_14262",
+    "fastapi_15280",
+    "rich_3934",
+    "rich_4077"
+  ],
+  "seed_rollouts": [
+    {
+      "id": "fastapi_14186_n08",
+      "task_id": "fastapi_14186",
+      "sample": 8,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_14186/n08/meta.json",
+      "patch_chars": 1028,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 7,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nERROR tests/test_compat.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.70s\n\nSTDERR:\n[2026-10-18 00:34:15,213] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 6,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [],
+      "clear_target_failure": false,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "fastapi_14186_n09",
+      "task_id": "fastapi_14186",
+      "sample": 9,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_14186/n09/meta.json",
+      "patch_chars": 705,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 11,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nERROR tests/test_compat.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.69s\n\nSTDERR:\n[2026-10-18 00:42:27,305] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 6,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [],
+      "clear_target_failure": false,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "fastapi_14262_n04",
+      "task_id": "fastapi_14262",
+      "sample": 4,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_14262/n04/meta.json",
+      "patch_chars": 4165,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 30,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nERROR tests/test_dependency_yield_scope.py - TypeError: Depends() got an unex...\nERROR tests/test_dependency_yield_scope_websockets.py - TypeError: Depends() ...\n!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!\n2 errors in 0.63s\n\nSTDERR:\n[2026-10-17 23:24:26,254] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 7,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [],
+      "clear_target_failure": false,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "fastapi_14262_n14",
+      "task_id": "fastapi_14262",
+      "sample": 14,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_14262/n14/meta.json",
+      "patch_chars": 832,
+      "has_patch": true,
+      "loop_pairs": 19,
+      "tool_calls_or_steps": 43,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nERROR tests/test_dependency_yield_scope.py - TypeError: Depends() got an unex...\nERROR tests/test_dependency_yield_scope_websockets.py - TypeError: Depends() ...\n!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!\n2 errors in 0.63s\n\nSTDERR:\n[2026-10-17 23:54:27,890] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 7,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [],
+      "clear_target_failure": false,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "fastapi_15280_n04",
+      "task_id": "fastapi_15280",
+      "sample": 4,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_15280/n04/meta.json",
+      "patch_chars": 14723,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 24,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_vibe.py::test_vibe_raises - AttributeError: 'FastAPI' objec...\n1 failed in 0.45s\n\nSTDERR:\n[2026-10-18 02:29:09,627] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_vibe.py::test_vibe_raises",
+        "tests/test_vibe.py::test_vibe_raises"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "fastapi_15280_n02",
+      "task_id": "fastapi_15280",
+      "sample": 2,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/fastapi_15280/n02/meta.json",
+      "patch_chars": 911,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 25,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_vibe.py::test_vibe_raises - AttributeError: 'FastAPI' objec...\n1 failed in 0.46s\n\nSTDERR:\n[2026-10-18 02:20:56,839] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_vibe.py::test_vibe_raises",
+        "tests/test_vibe.py::test_vibe_raises"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "rich_3934_n01",
+      "task_id": "rich_3934",
+      "sample": 1,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/rich_3934/n01/meta.json",
+      "patch_chars": 1892,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 17,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_live.py::test_live_empty - AssertionError: assert '\\n' not ...\n1 failed, 10 passed in 2.19s\n\nSTDERR:\n[2026-10-17 22:07:47,885] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_live.py::test_live_empty",
+        "tests/test_live.py::test_live_empty"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "oracle_partial_10pass_1fail",
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "rich_3934_n11",
+      "task_id": "rich_3934",
+      "sample": 11,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/rich_3934/n11/meta.json",
+      "patch_chars": 1128,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 19,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_live.py::test_live_empty - AssertionError: assert '\\n' not ...\n1 failed, 10 passed in 2.19s\n\nSTDERR:\n[2026-10-17 22:47:56,544] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_live.py::test_live_empty",
+        "tests/test_live.py::test_live_empty"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "oracle_partial_10pass_1fail",
+        "wall8_with_meaningful_patch"
+      ]
+    },
+    {
+      "id": "rich_4077_n02",
+      "task_id": "rich_4077",
+      "sample": 2,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/rich_4077/n02/meta.json",
+      "patch_chars": 473,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 28,
+      "error_before": "",
+      "error_before_empty": true,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_file_proxy.py::test_isatty - assert False\n1 failed, 3 passed in 0.09s\n\nSTDERR:\n[2026-10-17 21:07:34,443] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_file_proxy.py::test_isatty",
+        "tests/test_file_proxy.py::test_isatty"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "oracle_partial_3pass_1fail"
+      ]
+    },
+    {
+      "id": "rich_4077_n07",
+      "task_id": "rich_4077",
+      "sample": 7,
+      "meta_path": "results/p51a_r8_p314a/traces/bon/raw/rich_4077/n07/meta.json",
+      "patch_chars": 5511,
+      "has_patch": true,
+      "loop_pairs": 0,
+      "tool_calls_or_steps": 31,
+      "error_before": "Agent exceeded session timeout (8.0 min)",
+      "error_before_empty": false,
+      "oracle_error_summary": "=========================== short test summary info ============================\nFAILED tests/test_file_proxy.py::test_isatty - assert False\n1 failed, 3 passed in 0.10s\n\nSTDERR:\n[2026-10-17 21:34:20,171] WARNING in core: flasgger is not installed; serving the static landing page at / and skipping the Swagger UI and /spec.json.",
+      "oracle_error_n_lines": 5,
+      "g11_le_20": true,
+      "oracle_failed_nodes": [
+        "tests/test_file_proxy.py::test_isatty",
+        "tests/test_file_proxy.py::test_isatty"
+      ],
+      "clear_target_failure": true,
+      "near_why": [
+        "oracle_partial_3pass_1fail",
+        "wall8_with_meaningful_patch"
+      ]
+    }
+  ],
+  "exact_command": "python scripts/star_correct.py --tasks configs/p51f_star_near_miss_tasks.txt --agent-dir results/harvest_agent_p314a --max-retries 1 --error-tail-lines 20 --out results/p51f_star/traces/star/"
+}

@@ -51,12 +51,13 @@ def main() -> int:
     smoke_ids = set(splits["smoke"])
 
     litellm.drop_params = True
-    target = "gemma-4-31b-it-qat-w4a16-ct"
     declared = validate_single_declared_model(agent_dir)
+    # Alias registry must match the submitted agent.yaml model (31b default or 12b A/B).
+    target = os.environ.get("SMOKE_TARGET_MODEL", declared)
     adapters = discover_adapters(str(agent_dir), adapter_extensions=ALLOWED_ADAPTER_EXTENSIONS)
     gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 1
     tp = 4 if gpu_count >= 4 else (2 if gpu_count >= 2 else 1)
-    print("declared", declared, "tp", tp, "model", model_path, flush=True)
+    print("declared", declared, "target", target, "tp", tp, "model", model_path, flush=True)
 
     vllm_cfg = VllmConfig(
         model=str(model_path),
@@ -161,8 +162,9 @@ def main() -> int:
     wall = round(time.time() - t0, 2)
     mean_s = float(summary.seconds.mean()) if n else 0.0
     out = {
-        "ticket": "P3.1",
-        "budget_id": "community_budget_fit",
+        "ticket": os.environ.get("SMOKE_TICKET", "P3.1"),
+        "budget_id": os.environ.get("SMOKE_BUDGET_ID", "community_budget_fit"),
+        "ablation": os.environ.get("SMOKE_ABLATION", ""),
         "split": "smoke",
         "n": n,
         "resolved": r,

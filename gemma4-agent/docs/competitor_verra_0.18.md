@@ -57,4 +57,4 @@ We already ran essentially this **budget package** as P3.1 community (`8 min / 2
 
 - **P3.8d** zip built: `results/submission_p38d_maxout8192.zip` (max_out **8192**, wall4/60/temp0 kept). Submit/watch is the current Kaggle follow-up; verify final ref/status in UI before another zip.
 - **Do not** submit full Verra 28/8 until smoke re-check with their sampling.
-- GPU harvest no longer targets r5b. Current DS blocker is subprocess env parity: `inline_snapshot` and `dirty_equals` are missing from the harvest wheel path, which polluted `P5.1b-star-r1` misses.
+- GPU harvest no longer targets r5b. Host extras pin/preflight now require `inline_snapshot`/`dirty_equals`. Next measured arm: P3.15a exact-0.18 + 12B (see `docs/p315-model-size-ablation-plan.md`).

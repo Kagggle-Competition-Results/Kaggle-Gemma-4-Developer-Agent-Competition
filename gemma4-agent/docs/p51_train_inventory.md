@@ -10,8 +10,8 @@ Spec: [`docs/agent-dev-spec.md`](../../docs/agent-dev-spec.md) §5.
 | `ensure_subprocess_host_deps.py` | `--data` | **PRESENT** |
 | `filter_bon_keepers.py` | P5.2 loops/scratch/peak28k/dedupe | **PRESENT** |
 | `render_trajectories.py` | `--in --out data_train/sft.jsonl --mask-tool-results` | **PRESENT** |
-| `train_qlora.py` | DoRA SFT | **MISSING** |
-| `train_grpo.py` / `merge_adapters.py` | later | **MISSING** |
+| `train_qlora.py` | DoRA SFT | **PRESENT** (P5.3a; `--dry-run` CPU PASS 33/33) |
+| `train_grpo.py` / `merge_adapters.py` | GRPO + TIES | **PRESENT** (P5.3c; CPU `--dry-run` PASS) |
 
 ## Results
 
@@ -24,5 +24,7 @@ Spec: [`docs/agent-dev-spec.md`](../../docs/agent-dev-spec.md) §5.
 | **P5.1a-r6** | **~0.13 yield** | broadened 16 train_pool IDs × N=8 @0.2 |
 | **P5.5 merged** | **65 rows / 9 tasks** | r4+r5c+r6 merged into `data_train/sft.jsonl` |
 | **P5.1b-star-r1** | **1/9 recoveries** | 1 clean non-duplicate row; 5 misses blocked by missing deps |
+| **P5.2_star_merge** | **66 rows / 10 tasks** | merged STaR `fastapi_11194` into `data_train/sft.jsonl` |
+| **P5.1_host_deps_pin** | **done** | pin+BoN/STaR preflight require sandbox extras |
 
-**Next:** add missing subprocess deps (`inline_snapshot`, `dirty_equals`) before more STaR/BoN; merge the held-out STaR row after env fix review. No holdout.
+**Next:** renew `CLOUD_APPROVAL` → clean broaden harvest; run P3.15a 12B smoke. No holdout.
