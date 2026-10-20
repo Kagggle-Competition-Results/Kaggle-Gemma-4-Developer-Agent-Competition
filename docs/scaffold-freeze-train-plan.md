@@ -1,6 +1,6 @@
 # Scaffold-freeze then Train (Path 1)
 
-**Status snapshot:** freeze+gates+P5.0 done · **P5.1a-r5c PASS** yield=0.9375 · **P5.1a-r6** broadened yield~0.13 · **P5.1a-r7b** partial with 2 unique `rich_2943` patches merged into SFT · **P5.1a-r7d DONE** yield=0.0 (0/80) · **P5.1b-star-r1 DONE** recoveries=1/9 · LB branches: frozen **0.06** · public notebook **0.18** · P3.13 hybrid **0.13**
+**Status snapshot:** freeze kept · `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS` · P5.6c v2 TIES adapter · P6.1b smoke **0.30** (`failed_edit=0`) · Kaggle **57425395** PENDING · P6.3 autopsy: smoke `loop_rate=0.8` mostly regex artifact · public baseline **0.18**
 **Single source of truth for live status:** [`experiment_log.md`](./experiment_log.md)
 **Harvest ops (agents):** [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md)
 

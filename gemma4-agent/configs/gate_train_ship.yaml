@@ -3,6 +3,6 @@
 #        --out results/gate_train_ship.json --dry-run
 
 base_model: gemma-4-31b-it-qat-w4a16-ct
-# Set after DoRA/TIES produces a real adapter:
-# adapter: agent/adapters/master_swe_adapter
+# Set after DoRA/TIES produces a real adapter (bootstrap overwrites on pod):
 adapter: ""
+serve_check_report: ""

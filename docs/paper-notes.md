@@ -4,9 +4,9 @@
 
 **Competition:** [gemma-4-developer-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent) · Paper: [gemma-4-developer-agent-paper](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper)
 
-**Last updated:** 2026-10-12 (P5.1a-r7d done: oracle PASS; 0 keepers / 80 metas; GPU off; SFT **67/11**)
+**Last updated:** 2026-10-20 (P6.3 autopsy; `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS`; P6.1b smoke **0.30**; Kaggle **57425395** PENDING)
 
-**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · public baseline **0.18** · wall **4** · SFT **67/11** · P3.15a 12B FAIL · **RunPod off**.
+**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS` · public baseline **0.18** · P6.1b smoke **0.30** (`failed_edit=0.0`) · wall **4** · v2 `master_swe_adapter` bf16 · submit **57425395** PENDING · P3.15a 12B FAIL · **no cloud for P6.3**.
 
 **Plan doc:** [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md)
 
@@ -61,6 +61,7 @@
 | P3.8b | `max_time_minutes` **4 → 3.5** | Kaggle v23 | **0.10** | 1/10 | **no** | −0.10; 3× session timeout; **revert wall to 4** |
 | P3.11 | smoke **reshuffle** seed=42 (8/10 new IDs) | Kaggle v24 | **0.40** | 4/10 | **yes (stability)** | +0.20 vs orig smoke; **all 4 passes on new IDs**; overlap `rich_3480`/`rich_3930` fail; failed_edit=0.45; bad_arg=0 |
 | P3.12 | **force** edit-by-12 (prompt/skill; no schema) | RunPod A6000 | **0.00** | 0/10 | **no** | −0.20 vs P3.8; failed_edit=0.83; bad_arg=0.62; no_edit 4/10 still rg-past-12; **revert** |
+| P6.1b | freeze scaffold + v2 TIES `master_swe_adapter` (bf16 r64, Plan B `--enable-lora`) | RunPod A40 | **0.30** | 3/10 | **yes (ship)** | +0.10 vs P2.6/P3.8; passes `rich_3882`+`rich_3905`+`rich_3480`; `failed_edit=0.0`; `loop_rate=0.8` mostly smoke-regex artifact (P6.3); zip→Kaggle `57425395` |
 
 ### Per-task highlights (kept vs rejected)
 
@@ -352,6 +353,7 @@ Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
 | 2026-10-08 | **P5.1b** STaR recoveries=**0**/8; pivot harvest (no DoRA yet) |
 | 2026-10-09 | **P5.1b-star-r1** fixed STaR retry injection/persist path → recoveries=**1/9**; 1 clean non-duplicate row; 5 misses blocked by missing subprocess deps |
 | 2026-10-11 | **P3.15a** 12B Pass@1=**0.10** FAIL → keep 31B; **P5.1a-r7b** → **6 keepers** (`rich_2943`) → SFT **67/11**; **P5.1a-r7c** 0 keepers / 27 metas → GPU off |
+| 2026-10-20 | **P5.6c→GATE_TRAIN_SHIP PASS** (SFT→GRPO→TIES max_seq=4864 edit=100%); **P6.1b** smoke Pass@1=**0.30** `failed_edit=0`; **GATE_P6 PASS**; submit **57425395** PENDING; **P6.3** autopsy: `loop_rate=0.8` ≈ smoke regex quote-truncation + threshold mismatch vs train consec `loop_pairs` |
 
 *Append new measured rows here when ablations finish; do not invent numbers.*
 
@@ -368,8 +370,7 @@ Artifacts: `results/p39_peak_tokens.json`, `p38_peak_tokens.json`.
 
 ### Next steps (ordered)
 
-1. ~~CPU filter/render/merge r7b~~ **done:** SFT **67/11** (+`rich_2943`).
-2. ~~P5.1a-r7c~~ **stopped partial:** keepers=**0**, metas=27 (`rich_3105/3468/3518` 0/8; `rich_3772` 0/3). Artifacts: `gemma4-agent/results/p51a_r7c/`.
-3. **Done:** **P5.1a-r7d** freeze BoN on 10 tasks (non-rich first) finished with oracle PASS, `0/80` keepers, and mixed failure classes (`test_fail`, `timeout`, `test_patch_apply_fail`, `no_submit_patch`). Artifacts: `gemma4-agent/results/p51a_r7d/` and `gemma4-agent/results/p51a_r7d_filtered/`.
-4. Next: CPU autopsy on `r7d` fail classes, then decide targeted rerun vs pool refresh. Freeze agent only; no edit-prompt A/Bs.
-5. If a hypothetical `P3.15b` public probe is still taken, treat the score read as a strict 12B keep/kill gate only. The serious path toward **0.25** remains: `r7d` autopsy -> repaired **31B** BoN/STaR -> larger SFT set -> DoRA A/B -> next scoring submit.
+1. ~~Train ship + P6.1b smoke + GATE_P6 + submit~~ **done:** v2 adapter smoke **0.30**; Kaggle **57425395** PENDING (`subs_remaining_today=0`).
+2. **Watch LB `57425395`** — if ≥ public **0.18**, keep v2; if clear miss, v3 harvest on assertion_fail smoke tasks only (freeze agent; no edit-prompt A/Bs).
+3. Do **not** chase smoke `loop_rate=0.8` — P6.3 shows mostly eval regex collapse of distinct `grep` patterns + `>0` threshold vs train consec `loop_pairs≤2` (artifact: `results/p56c_full_edit_pipeline/p63_smoke_autopsy.*`).
+4. Freeze agent only; no cloud without live `CLOUD_APPROVAL`.

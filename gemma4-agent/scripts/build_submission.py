@@ -64,7 +64,7 @@ def collect_files(agent_dir: Path) -> tuple[list[Path], list[str], int]:
     for path in sorted(agent_dir.rglob("*")):
         if not path.is_file():
             continue
-        if path.name == ".gitkeep":
+        if path.name == ".gitkeep" or path.name.startswith("._") or path.name == ".DS_Store":
             continue
         why = _is_forbidden(path, agent_dir)
         if why:

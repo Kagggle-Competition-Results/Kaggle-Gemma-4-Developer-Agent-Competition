@@ -235,13 +235,47 @@ def gpu_serve_check(cfg: dict[str, Any], adapter: Path, out_path: Path) -> dict[
         )
     print(f"P57_LOAD_MODEL ct={is_ct} path={model_dir}", flush=True)
     base = AutoModelForCausalLM.from_pretrained(str(model_dir), **load_kwargs)
+
+    # Drop vision before PEFT / first forward (leaf names collide with LM targets).
+    def _drop_vision(root: Any, label: str) -> int:
+        dropped = 0
+        for attr in (
+            "vision_tower",
+            "vision_model",
+            "multi_modal_projector",
+            "mm_projector",
+            "vision_projector",
+        ):
+            if hasattr(root, attr) and getattr(root, attr) is not None:
+                try:
+                    setattr(root, attr, None)
+                    dropped += 1
+                    print(f"P57_DROP_VISION {label}.{attr}", flush=True)
+                except Exception as exc:
+                    print(f"P57_DROP_VISION_FAIL {label}.{attr} err={exc}", flush=True)
+        return dropped
+
+    n_drop = _drop_vision(base, "base")
+    if hasattr(base, "model"):
+        n_drop += _drop_vision(base.model, "base.model")
+    print(f"P57_DROP_VISION_TOTAL n={n_drop}", flush=True)
+    try:
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+
     try:
         sys.path.insert(0, str(_repo_root() / "scripts"))
         from train_qlora import (
+            patch_ct_pack_quantized_forward,
             patch_peft_for_gemma4_clippable,
             replace_gemma4_clippable_with_nn_linear_proxies,
         )
 
+        # Must strip CT decompress-all hook + install OTF pack forward before any
+        # forward — full decompress OOMs 48GB (same failure as P5.6 pre-fix).
+        if is_ct:
+            patch_ct_pack_quantized_forward(base)
         if is_ct or any(type(m).__name__ == "Gemma4ClippableLinear" for _, m in base.named_modules()):
             replace_gemma4_clippable_with_nn_linear_proxies(base)
             patch_peft_for_gemma4_clippable()

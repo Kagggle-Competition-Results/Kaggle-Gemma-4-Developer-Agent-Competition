@@ -25,7 +25,15 @@ lr_scheduler_type: cosine
 num_train_epochs: 1
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 4
-max_seq_length: 24576
+# Match SFT 48GB fit; head+tail keeps late edit/verify/submit in-window at 100%.
+max_seq_length: 4864
+windowing: header_tail
+# P6.5: surgical windows + sprawl guards (align SFT).
+mask_superseded_edits: true
+max_windows_per_row: 2
+allow_mid_edit_windows: false
+adapter_save_dtype: bfloat16
+ce_loss_chunk_size: 128
 bf16: true
 gradient_checkpointing: true
 gradient_checkpointing_use_reentrant: false
@@ -49,6 +57,11 @@ enforce_polarity_margin: true
 advantage_margin: 0.05
 # P5.2c: spiral keepers (loop_pairs > 2) cannot be GRPO positive anchors (align filter_bon_keepers).
 max_loop_pairs_positive: 2
+# P6.6: soft sprawl via reward penalties (n_edits>4 / patch>3000); hard positive-anchor
+# ceiling relaxed so mixed groups recover (surgical mask already zeros mid-edits).
+# Extreme sprawl (e.g. fastapi_13207 5221 chars) still blocked at 4500.
+max_edits_positive: 8
+max_patch_chars_positive: 4500
 
 # Reward (ORM + rules only). r_exec_pass must dominate bounded heuristics.
 reward:
@@ -58,6 +71,10 @@ reward:
   r_syntax_bad: 0.0
   r_heuristic_graph_before_edit: 0.1
   r_heuristic_repeat_tool_args: -0.2
+  # P6.5 sprawl / syntax guards (bounded; must stay << r_exec_pass)
+  r_heuristic_edit_sprawl: -0.15          # n_edits > 4
+  r_heuristic_diff_bloat: -0.15           # patch_chars > 3000
+  r_heuristic_syntax_import_error: -0.25  # SyntaxError / literal \"\"\" escapes
   # R_penalty = lambda_t * tokens + lambda_u * n_tools (spec §6)
   lambda_t: 1.0e-5
   lambda_u: 0.01

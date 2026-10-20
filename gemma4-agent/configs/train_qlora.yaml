@@ -26,7 +26,9 @@ target_modules:
 
 learning_rate: 2.0e-4
 lr_scheduler_type: cosine
-num_train_epochs: 1
+# ≥2 epochs over head+tail windows (P6.5: no mid_edit thrash; ≤2 windows/row).
+# With ≤146 windows, grad_accum=8 → ~36 optimizer steps.
+num_train_epochs: 2
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 8
 warmup_ratio: 0.03
@@ -36,9 +38,20 @@ logging_steps: 10
 save_steps: 50
 seed: 42
 
-# Seq len train ≤28000 (under 32768). Sized for Gemma-4 chat-template tokenized
-# SFT max≈22421 (tool_call expansion) with headroom; dry-run must report 0 truncated.
-max_seq_length: 24576
+# Seq len train ≤28000. 48GB L40S/Ada: 6144 OOM/fragmented; 4864 fits with
+# turn-aligned head+tail windowing while keeping final edit/submit coverage at 100%.
+# Save adapters as bfloat16 (~0.95GB) for <3 GiB zip budget.
+max_seq_length: 4864
+windowing: turn_aligned_head_tail
+# P6.5 surgical supervision: mask superseded intermediate edits; head+tail only.
+mask_superseded_edits: true
+max_windows_per_row: 2
+allow_mid_edit_windows: false
+adapter_save_dtype: bfloat16
+ce_loss_chunk_size: 128
+# bitsandbytes 8-bit Adam — cuts ~2–4GB vs fp32 AdamW moments on ~490M LoRA params.
+optim: adamw_8bit
+logging_steps: 1
 
 # Assistant-only CE: system/user/tool_response → label -100; supervise tool_call + model free-text only.
 assistant_only_loss: true

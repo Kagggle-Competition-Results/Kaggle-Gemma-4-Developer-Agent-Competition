@@ -30,6 +30,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+# Before train_qlora / torch imports: reduce CUDA allocator fragmentation on 48GB.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import yaml
 
 # Reuse P5.3b mask helpers (same process, no new schema).
@@ -39,12 +42,19 @@ if str(_SCRIPT_DIR) not in sys.path:
 from train_qlora import (  # noqa: E402
     IGNORE_INDEX,
     apply_chat_template,
+    build_grpo_windows,
     build_labels_assistant_only,
+    classify_edit_roles,
     classify_supervised_leakage,
+    edit_coverage_for_windows,
     encode_text,
+    find_edit_calls_detailed,
+    find_edit_token_spans,
     load_tokenizer_backend,
+    mask_superseded_edit_labels,
     normalize_messages_for_gemma,
     resolve_model_path,
+    save_peft_adapter_bf16,
     validate_config as validate_qlora_peft_subset,
 )
 
@@ -86,6 +96,9 @@ def validate_grpo_config(cfg: dict[str, Any]) -> dict[str, Any]:
         ("r_syntax_bad", 0.0),
         ("r_heuristic_graph_before_edit", 0.1),
         ("r_heuristic_repeat_tool_args", -0.2),
+        ("r_heuristic_edit_sprawl", -0.15),
+        ("r_heuristic_diff_bloat", -0.15),
+        ("r_heuristic_syntax_import_error", -0.25),
         ("lambda_t", 1e-5),
         ("lambda_u", 0.01),
     ):
@@ -109,12 +122,26 @@ def validate_grpo_config(cfg: dict[str, Any]) -> dict[str, Any]:
     if max_loop < 0:
         raise SystemExit(f"max_loop_pairs_positive must be >=0, got {max_loop}")
     out["max_loop_pairs_positive"] = max_loop
+    max_edits_pos = int(cfg.get("max_edits_positive", 8))
+    max_patch_pos = int(cfg.get("max_patch_chars_positive", 4500))
+    if max_edits_pos < 1:
+        raise SystemExit(f"max_edits_positive must be >=1, got {max_edits_pos}")
+    if max_patch_pos < 1:
+        raise SystemExit(f"max_patch_chars_positive must be >=1, got {max_patch_pos}")
+    out["max_edits_positive"] = max_edits_pos
+    out["max_patch_chars_positive"] = max_patch_pos
+    out["mask_superseded_edits"] = bool(cfg.get("mask_superseded_edits", True))
+    out["max_windows_per_row"] = int(cfg.get("max_windows_per_row", 2))
+    out["allow_mid_edit_windows"] = bool(cfg.get("allow_mid_edit_windows", False))
     # ORM dominance: r_exec_pass must exceed max bounded heuristic uplift on fails
     reward = out["reward"]
     max_fail_uplift = (
         abs(float(reward["r_syntax_ok"]))
         + abs(float(reward["r_heuristic_graph_before_edit"]))
         + abs(float(reward["r_heuristic_repeat_tool_args"]))
+        + abs(float(reward["r_heuristic_edit_sprawl"]))
+        + abs(float(reward["r_heuristic_diff_bloat"]))
+        + abs(float(reward["r_heuristic_syntax_import_error"]))
     )
     if float(reward["r_exec_pass"]) - float(reward["r_exec_fail"]) <= max_fail_uplift:
         print(
@@ -325,13 +352,56 @@ def loop_pairs_for_run(run_dir: Path) -> int:
     return loop_pairs_from_trace(trace)
 
 
-def is_positive_anchor(row: dict[str, Any], max_loop_pairs: int) -> bool:
-    """True-oracle pass AND non-spiral (loop_pairs <= max). Spiral keepers stay out of +adv."""
-    return bool(row.get("resolved")) and int(row.get("loop_pairs") or 0) <= int(max_loop_pairs)
+def _n_edits_from_tool_calls(tool_calls: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for tc in tool_calls
+        if str(tc.get("name") or "") in {"edit_file", "write_file"}
+    )
+
+
+def _has_syntax_or_escaped_docstring(row: dict[str, Any], tool_calls: list[dict[str, Any]]) -> bool:
+    blob = " ".join(
+        [
+            str(row.get("error") or ""),
+            str(row.get("patch") or "")[:8000],
+            json.dumps(tool_calls)[:20000],
+        ]
+    )
+    if "SyntaxError" in blob or "syntaxerror" in blob.lower():
+        return True
+    if '\\"\\"\\"' in blob or '\\\\\\"\\\\\\"\\\\\\"' in blob:
+        return True
+    # Literal escaped docstring pattern seen on rich_3930 agent patches
+    if '\\\\"\\\\"\\\\"' in blob:
+        return True
+    return False
+
+
+def is_positive_anchor(
+    row: dict[str, Any],
+    max_loop_pairs: int,
+    *,
+    max_edits_positive: int | None = None,
+    max_patch_chars_positive: int | None = None,
+) -> bool:
+    """True-oracle pass, non-spiral, and under P6.5 sprawl caps when set."""
+    if not bool(row.get("resolved")):
+        return False
+    if int(row.get("loop_pairs") or 0) > int(max_loop_pairs):
+        return False
+    if max_edits_positive is not None:
+        n_edits = int(row.get("n_edits") or 0)
+        if n_edits > int(max_edits_positive):
+            return False
+    if max_patch_chars_positive is not None:
+        if int(row.get("patch_chars") or 0) > int(max_patch_chars_positive):
+            return False
+    return True
 
 
 def score_rollout(row: dict[str, Any], reward: dict[str, Any]) -> dict[str, float]:
-    """ORM + rule heuristics (G13). No learned PRM."""
+    """ORM + rule heuristics (G13). No learned PRM. P6.5 adds sprawl/syntax penalties."""
     r_exec = float(reward["r_exec_pass"] if row["resolved"] else reward["r_exec_fail"])
     patch = row.get("patch") or ""
     syntax_ok = ("diff --git" in patch or patch.startswith("---")) and ("+++" in patch or "@@" in patch)
@@ -341,6 +411,8 @@ def score_rollout(row: dict[str, Any], reward: dict[str, Any]) -> dict[str, floa
 
     tool_calls = _tool_calls_from_trace(Path(row["run_dir"]))
     n_tools = len(tool_calls)
+    n_edits = _n_edits_from_tool_calls(tool_calls)
+    row["n_edits"] = n_edits
     # Estimate tokens from patch + rough tool budget when no tokenizer available
     tokens = max(row.get("patch_chars") or 0, 1) + 64 * n_tools
 
@@ -368,6 +440,14 @@ def score_rollout(row: dict[str, Any], reward: dict[str, Any]) -> dict[str, floa
             break
         seen.add(key)
 
+    # P6.5: edit sprawl / diff bloat / syntax-escape penalties
+    if n_edits > 4:
+        r_h += float(reward.get("r_heuristic_edit_sprawl", -0.15))
+    if int(row.get("patch_chars") or 0) > 3000:
+        r_h += float(reward.get("r_heuristic_diff_bloat", -0.15))
+    if _has_syntax_or_escaped_docstring(row, tool_calls):
+        r_h += float(reward.get("r_heuristic_syntax_import_error", -0.25))
+
     r_pen = float(reward["lambda_t"]) * float(tokens) + float(reward["lambda_u"]) * float(n_tools)
     total = r_exec + r_syntax + r_h - r_pen
     return {
@@ -377,6 +457,7 @@ def score_rollout(row: dict[str, Any], reward: dict[str, Any]) -> dict[str, floa
         "R_heuristic": r_h,
         "R_penalty": r_pen,
         "n_tools": float(n_tools),
+        "n_edits": float(n_edits),
         "tokens_est": float(tokens),
     }
 
@@ -392,11 +473,14 @@ def group_advantages(
     enforce_polarity_margin: bool = True,
     advantage_margin: float = 0.05,
     max_loop_pairs_positive: int = 2,
+    max_edits_positive: int = 8,
+    max_patch_chars_positive: int = 4500,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Build mixed-polarity GRPO groups with ORM-strict polarity margins.
 
     Eligibility:
       - ≥1 non-spiral true-oracle resolved (loop_pairs <= max_loop_pairs_positive)
+      - under sprawl hard caps (n_edits / patch_chars) when set (P6.6: 8 / 4500)
       - ≥1 true-oracle fail when require_negative_in_group (skip all-pass)
       - ≥2 rollouts; reward variance > 0 when require_reward_variance
     Resolved edit-spirals (loop_pairs > max) are never positive anchors (no +adv).
@@ -414,8 +498,19 @@ def group_advantages(
     n_zero_adv = 0
     n_spiral_resolved_excluded = 0
     n_positive_anchors_loop_gt_max = 0
+    n_sprawl_resolved_excluded = 0
     margin = float(advantage_margin)
     max_loop = int(max_loop_pairs_positive)
+    max_edits = int(max_edits_positive)
+    max_patch = int(max_patch_chars_positive)
+
+    def _pos(x: dict[str, Any]) -> bool:
+        return is_positive_anchor(
+            x,
+            max_loop,
+            max_edits_positive=max_edits,
+            max_patch_chars_positive=max_patch,
+        )
 
     for tid, items in sorted(by_task.items()):
         # Second-pass dedupe inside task (belt-and-suspenders)
@@ -433,14 +528,31 @@ def group_advantages(
             x for x in items if x["resolved"] and int(x.get("loop_pairs") or 0) > max_loop
         ]
         n_spiral_resolved_excluded += len(spiral_resolved)
-        # Positive anchors: resolved AND loop_pairs <= max (P5.1c / filter_bon_keepers)
-        keeps = [x for x in items if is_positive_anchor(x, max_loop)]
+        sprawl_resolved = [
+            x
+            for x in items
+            if x["resolved"]
+            and int(x.get("loop_pairs") or 0) <= max_loop
+            and not _pos(x)
+        ]
+        n_sprawl_resolved_excluded += len(sprawl_resolved)
+        # Positive anchors: resolved, non-spiral, under sprawl caps (P6.5).
+        # Prefer cleaner keepers (fewest edits, then smallest patch) as primary +anchor.
+        keeps = sorted(
+            [x for x in items if _pos(x)],
+            key=lambda x: (int(x.get("n_edits") or 0), int(x.get("patch_chars") or 0)),
+        )
         fails = [x for x in items if not x["resolved"]]
         n_ok_pool = len(keeps)
         n_fail_pool = len(fails)
 
         if require_positive_in_group and n_ok_pool < 1:
-            reason = "zero_pass_spiral_only" if spiral_resolved else "zero_pass"
+            if spiral_resolved and not sprawl_resolved:
+                reason = "zero_pass_spiral_only"
+            elif sprawl_resolved:
+                reason = "zero_pass_sprawl_only"
+            else:
+                reason = "zero_pass"
             skipped.append(
                 {
                     "task_id": tid,
@@ -448,6 +560,7 @@ def group_advantages(
                     "n_resolved_pool": n_ok_pool,
                     "n_fail_pool": n_fail_pool,
                     "n_spiral_resolved": len(spiral_resolved),
+                    "n_sprawl_resolved": len(sprawl_resolved),
                     "spiral_loop_pairs": [int(x.get("loop_pairs") or 0) for x in spiral_resolved],
                 }
             )
@@ -465,7 +578,7 @@ def group_advantages(
             continue
 
         # Prefer 1 unique non-spiral keeper + (G-1) distinct fails when enough negatives exist.
-        # Never clone a positive to pad G. Never pick spiral-resolved as +anchor.
+        # Never clone a positive to pad G. Never pick spiral/sprawl-resolved as +anchor.
         picked: list[dict[str, Any]] = []
         if n_ok_pool >= 1 and n_fail_pool >= max(1, group_size - 1):
             picked.append(keeps[0])
@@ -490,7 +603,7 @@ def group_advantages(
             picked_u.append(p)
         picked = picked_u[:group_size]
 
-        if require_positive_in_group and not any(is_positive_anchor(p, max_loop) for p in picked):
+        if require_positive_in_group and not any(_pos(p) for p in picked):
             skipped.append({"task_id": tid, "reason": "pick_lost_positive", "n_resolved_pool": n_ok_pool})
             continue
         if require_negative_in_group and not any(not p["resolved"] for p in picked):
@@ -500,7 +613,7 @@ def group_advantages(
             skipped.append({"task_id": tid, "reason": "group_too_small", "n": len(picked)})
             continue
 
-        if require_positive_in_group and sum(1 for p in picked if is_positive_anchor(p, max_loop)) < 1:
+        if require_positive_in_group and sum(1 for p in picked if _pos(p)) < 1:
             skipped.append({"task_id": tid, "reason": "no_positive_in_picked"})
             continue
         if require_negative_in_group and sum(1 for p in picked if not p["resolved"]) < 1:
@@ -515,7 +628,7 @@ def group_advantages(
                 {
                     "task_id": tid,
                     "reason": "zero_reward_variance",
-                    "n_resolved": sum(1 for p in picked if is_positive_anchor(p, max_loop)),
+                    "n_resolved": sum(1 for p in picked if _pos(p)),
                 }
             )
             continue
@@ -527,10 +640,10 @@ def group_advantages(
             adv = [(r - mean) / std for r in rewards]
             std_used = std
 
-        n_res = sum(1 for x in picked if is_positive_anchor(x, max_loop))
+        n_res = sum(1 for x in picked if _pos(x))
         n_fail = sum(1 for x in picked if not x["resolved"])
         mixed = n_res >= 1 and n_fail >= 1
-        pos_flags = [is_positive_anchor(p, max_loop) for p in picked]
+        pos_flags = [_pos(p) for p in picked]
 
         # Count inversion before polarity enforcement
         for p, a, pos in zip(picked, adv, pos_flags):
@@ -610,7 +723,10 @@ def group_advantages(
         "enforce_polarity_margin": enforce_polarity_margin,
         "advantage_margin": margin,
         "max_loop_pairs_positive": max_loop,
+        "max_edits_positive": max_edits,
+        "max_patch_chars_positive": max_patch,
         "n_spiral_resolved_excluded": n_spiral_resolved_excluded,
+        "n_sprawl_resolved_excluded": n_sprawl_resolved_excluded,
         "positive_anchors_with_loop_gt_2": n_positive_anchors_loop_gt_max,
         "zero_adv_rollouts": n_zero_adv,
         "groups_with_duplicate_trajectories": sum(
@@ -696,6 +812,8 @@ def dry_run(cfg: dict[str, Any]) -> dict[str, Any]:
         enforce_polarity_margin=bool(cfg.get("enforce_polarity_margin", True)),
         advantage_margin=float(cfg.get("advantage_margin", 0.05)),
         max_loop_pairs_positive=int(cfg.get("max_loop_pairs_positive", 2)),
+        max_edits_positive=int(cfg.get("max_edits_positive", 8)),
+        max_patch_chars_positive=int(cfg.get("max_patch_chars_positive", 4500)),
     )
 
     # ORM strict: no unresolved rollout may keep advantage > 0
@@ -738,6 +856,98 @@ def dry_run(cfg: dict[str, Any]) -> dict[str, Any]:
 
     reward_vals = [float(r["scores"]["R"]) for r in rollouts]
     mask = dry_run_mask_check(cfg)
+
+    # Edit-window coverage on active GRPO groups (head+tail; P6.5 surgical).
+    max_windows = int(cfg.get("max_windows_per_row", 2))
+    allow_mid = bool(cfg.get("allow_mid_edit_windows", False))
+    do_mask_super = bool(cfg.get("mask_superseded_edits", True))
+    edit_cov: dict[str, Any] = {
+        "edit_total": 0,
+        "edit_fully_in_window": 0,
+        "edit_truncated_beyond": 0,
+        "edit_in_window_pct": None,
+        "final_winning_edits_in_window_pct": None,
+        "superseded_failed_edits_supervised": 0,
+        "n_rollouts_checked": 0,
+        "n_groups": len(groups),
+        "windowing": "header_tail" if not allow_mid else "header_tail_plus_mid_edit",
+        "max_seq_length": int(cfg["max_seq_length"]),
+        "max_windows_per_row": max_windows,
+        "mask_superseded_edits": do_mask_super,
+    }
+    try:
+        model_dir = resolve_model_path(cfg)
+        backend, tok = load_tokenizer_backend(model_dir)
+        max_seq = int(cfg["max_seq_length"])
+        et = ei = etr = 0
+        fw_tot = fw_in = 0
+        super_sup = 0
+        n_checked = 0
+        n_windows = 0
+        for g in groups:
+            for meta_path in g.get("meta_paths") or []:
+                run_dir = Path(meta_path).parent if meta_path else Path()
+                if not run_dir.is_dir():
+                    continue
+                rendered = _render_run_any(run_dir, mask_tool_results=True)
+                if not rendered or not rendered.get("messages"):
+                    continue
+                norm = normalize_messages_for_gemma(rendered["messages"])
+                text = apply_chat_template(norm, model_dir)
+                ids = encode_text(backend, tok, text)
+                labels = build_labels_assistant_only(text, ids, backend, tok)
+                from train_qlora import prepare_surgical_labels_and_windows
+
+                labels, wins, detailed, _ms = prepare_surgical_labels_and_windows(
+                    text,
+                    ids,
+                    labels,
+                    backend,
+                    tok,
+                    max_seq,
+                    mask_superseded=do_mask_super,
+                    max_windows_per_row=max_windows,
+                    allow_mid_edit_windows=allow_mid,
+                )
+                edits = find_edit_token_spans(text, backend, tok)
+                cov = edit_coverage_for_windows(edits, wins)
+                finals = [
+                    {"name": e["name"], "start": e["tok_start"], "end": e["tok_end"]}
+                    for e in detailed
+                    if e.get("role") == "final_winning"
+                ]
+                fcov = edit_coverage_for_windows(finals, wins)
+                supers = [e for e in detailed if e.get("superseded")]
+                for e in supers:
+                    a, b = int(e["tok_start"]), int(e["tok_end"])
+                    for i in range(max(0, a), min(b, len(labels))):
+                        if labels[i] != IGNORE_INDEX:
+                            super_sup += 1
+                et += cov["edit_total"]
+                ei += cov["edit_fully_in_window"]
+                etr += cov["edit_truncated_beyond"]
+                fw_tot += len(finals)
+                fw_in += int(fcov["edit_fully_in_window"])
+                n_checked += 1
+                n_windows += len(wins)
+        edit_cov.update(
+            {
+                "edit_total": et,
+                "edit_fully_in_window": ei,
+                "edit_truncated_beyond": etr,
+                "edit_in_window_pct": round(100.0 * ei / et, 2) if et else 100.0,
+                "final_winning_edits_total": fw_tot,
+                "final_winning_edits_in_window": fw_in,
+                "final_winning_edits_in_window_pct": (
+                    round(100.0 * fw_in / fw_tot, 2) if fw_tot else 100.0
+                ),
+                "superseded_failed_edits_supervised": super_sup,
+                "n_rollouts_checked": n_checked,
+                "n_windows": n_windows,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        edit_cov["error"] = str(exc)
 
     # Cross-directory pairing evidence: tasks with both bon + star metas
     by_task_roots: dict[str, set[str]] = defaultdict(set)
@@ -827,7 +1037,10 @@ def dry_run(cfg: dict[str, Any]) -> dict[str, Any]:
             "sample_groups": groups[:5],
         },
         "mask": mask,
+        "edit_coverage": edit_cov,
         "no_prm": True,
+        # P6.5: head+tail windowing intentionally drops mid-trajectory thrash edits
+        # from coverage; gate on surgical finals (100% in-window) + no superseded CE.
         "pass": bool(groups)
         and all_positive_anchor
         and all_negative_anchor
@@ -838,7 +1051,11 @@ def dry_run(cfg: dict[str, Any]) -> dict[str, Any]:
         and no_dups
         and polarity_ok
         and positive_anchors_loop_gt == 0
-        and (mask.get("pass", True) is True),
+        and (mask.get("pass", True) is True)
+        and edit_cov.get("error") is None
+        and float(edit_cov.get("final_winning_edits_in_window_pct") or 0) >= 100.0
+        and int(edit_cov.get("superseded_failed_edits_supervised") or 0) == 0
+        and int(edit_cov.get("n_rollouts_checked") or 0) >= 1,
     }
     return report
 
@@ -936,6 +1153,8 @@ def train_gpu(cfg: dict[str, Any], out_dir: Path) -> None:
         enforce_polarity_margin=bool(cfg.get("enforce_polarity_margin", True)),
         advantage_margin=float(cfg.get("advantage_margin", 0.05)),
         max_loop_pairs_positive=int(cfg.get("max_loop_pairs_positive", 2)),
+        max_edits_positive=int(cfg.get("max_edits_positive", 8)),
+        max_patch_chars_positive=int(cfg.get("max_patch_chars_positive", 4500)),
     )
     by_meta = {str(r.get("meta_path")): r for r in rollouts}
     train_items: list[dict[str, Any]] = []
@@ -997,10 +1216,48 @@ def train_gpu(cfg: dict[str, Any], out_dir: Path) -> None:
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-    from train_qlora import patch_peft_for_gemma4_clippable, replace_gemma4_clippable_with_nn_linear_proxies
+    from train_qlora import (
+        install_chunked_causal_lm_loss,
+        patch_ct_pack_quantized_forward,
+        patch_peft_for_gemma4_clippable,
+        replace_gemma4_clippable_with_nn_linear_proxies,
+    )
 
     print(f"GRPO_LOAD_MODEL ct={is_ct} path={model_dir}", flush=True)
     base = AutoModelForCausalLM.from_pretrained(str(model_dir), **load_kwargs)
+
+    # Drop vision before PEFT inject — SFT adapter targets q_proj/… leaf names that
+    # also exist under Gemma4ClippableLinear in the vision tower.
+    def _drop_vision(root: Any, label: str) -> int:
+        dropped = 0
+        for attr in (
+            "vision_tower",
+            "vision_model",
+            "multi_modal_projector",
+            "mm_projector",
+            "vision_projector",
+        ):
+            if hasattr(root, attr) and getattr(root, attr) is not None:
+                try:
+                    setattr(root, attr, None)
+                    dropped += 1
+                    print(f"GRPO_DROP_VISION {label}.{attr}", flush=True)
+                except Exception as exc:
+                    print(f"GRPO_DROP_VISION_FAIL {label}.{attr} err={exc}", flush=True)
+        return dropped
+
+    n_drop = _drop_vision(base, "base")
+    if hasattr(base, "model"):
+        n_drop += _drop_vision(base.model, "base.model")
+    print(f"GRPO_DROP_VISION_TOTAL n={n_drop}", flush=True)
+    try:
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+    if is_ct:
+        patch_ct_pack_quantized_forward(base)
+        install_chunked_causal_lm_loss(base, chunk_size=int(cfg.get("ce_loss_chunk_size", 256)))
     if is_ct or any(type(m).__name__ == "Gemma4ClippableLinear" for _, m in base.named_modules()):
         replace_gemma4_clippable_with_nn_linear_proxies(base)
         patch_peft_for_gemma4_clippable()
@@ -1020,7 +1277,8 @@ def train_gpu(cfg: dict[str, Any], out_dir: Path) -> None:
         if hasattr(model, "config"):
             model.config.use_cache = False
 
-    max_seq = int(cfg.get("max_seq_length", 24576))
+    # 48GB CT+LoRA: keep GRPO seq aligned with SFT fit unless overridden.
+    max_seq = int(cfg.get("max_seq_length", 4096))
     lr = float(cfg.get("learning_rate", 1e-5))
     beta = float(cfg.get("beta", 0.04))
     epochs = float(cfg.get("num_train_epochs", 1))
@@ -1035,34 +1293,52 @@ def train_gpu(cfg: dict[str, Any], out_dir: Path) -> None:
             norm = normalize_messages_for_gemma(item["messages"])
             text = apply_chat_template(norm, model_dir)
             full_ids = encode_text("transformers", tokenizer, text)
-            ids = full_ids[:max_seq]
-            labels = build_labels_assistant_only(
+            labels_full = build_labels_assistant_only(
                 text, full_ids, "transformers", tokenizer
-            )[: len(ids)]
-            if sum(1 for x in labels if x != IGNORE_INDEX) < 1:
-                continue
-            input_ids = torch.tensor([ids], device=device)
-            lab = torch.tensor([labels], device=device)
-            out = model(input_ids=input_ids, labels=lab)
-            # Advantage-weighted CE: maximize likelihood of +adv, minimize -adv.
-            w = float(item["advantage"])
-            loss = out.loss * (-w) * (1.0 + beta)
-            if not torch.isfinite(loss):
-                continue
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), float(cfg.get("max_grad_norm", 1.0)))
-            opt.step()
-            losses.append(float(loss.detach().cpu()))
-            steps += 1
-            if steps % 5 == 0 or steps == 1:
-                print(
-                    f"GRPO_STEP {steps} loss={losses[-1]:.4f} adv={w:.3f} task={item['task_id']}",
-                    flush=True,
+            )
+            from train_qlora import prepare_surgical_labels_and_windows
+
+            labels_full, wins, _detailed, _ms = prepare_surgical_labels_and_windows(
+                text,
+                full_ids,
+                labels_full,
+                "transformers",
+                tokenizer,
+                max_seq,
+                mask_superseded=bool(cfg.get("mask_superseded_edits", True)),
+                max_windows_per_row=int(cfg.get("max_windows_per_row", 2)),
+                allow_mid_edit_windows=bool(cfg.get("allow_mid_edit_windows", False)),
+            )
+            w_adv = float(item["advantage"])
+            for win in wins:
+                ids = win["input_ids"]
+                labels = win["labels"]
+                if sum(1 for x in labels if x != IGNORE_INDEX) < 1:
+                    continue
+                input_ids = torch.tensor([ids], device=device)
+                lab = torch.tensor([labels], device=device)
+                out = model(input_ids=input_ids, labels=lab)
+                # Advantage-weighted CE: maximize likelihood of +adv, minimize -adv.
+                loss = out.loss * (-w_adv) * (1.0 + beta)
+                if not torch.isfinite(loss):
+                    continue
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), float(cfg.get("max_grad_norm", 1.0))
                 )
+                opt.step()
+                losses.append(float(loss.detach().cpu()))
+                steps += 1
+                if steps % 5 == 0 or steps == 1:
+                    print(
+                        f"GRPO_STEP {steps} loss={losses[-1]:.4f} adv={w_adv:.3f} "
+                        f"task={item['task_id']} win={win.get('kind')} ntok={len(ids)}",
+                        flush=True,
+                    )
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(str(out_dir))
+    save_meta = save_peft_adapter_bf16(model, out_dir)
     tokenizer.save_pretrained(str(out_dir))
     peak_vram = None
     try:
@@ -1082,6 +1358,15 @@ def train_gpu(cfg: dict[str, Any], out_dir: Path) -> None:
             "positive_anchors_with_loop_gt_2": filt.get("positive_anchors_with_loop_gt_2"),
         },
         "n_steps": steps,
+        "max_seq_length": max_seq,
+        "windowing": (
+            "header_tail"
+            if not bool(cfg.get("allow_mid_edit_windows", False))
+            else "header_tail_plus_mid_edit"
+        ),
+        "mask_superseded_edits": bool(cfg.get("mask_superseded_edits", True)),
+        "max_windows_per_row": int(cfg.get("max_windows_per_row", 2)),
+        "adapter_save": save_meta,
         "train_loss_start": losses[0] if losses else None,
         "train_loss_end": losses[-1] if losses else None,
         "train_loss_mean": sum(losses) / len(losses) if losses else None,

@@ -53,15 +53,32 @@ for i in $(seq 1 720); do
     echo "$OUT"
   } | tee -a "$LOG"
 
-  if echo "$OUT" | grep -Eq 'STATUS=(SFT_FAIL|GRPO_FAIL|MERGE_FAIL|SERVE_CHECK_FAIL|GATE_FAIL|MODEL_SYNC_FAIL|PREFLIGHT_.*FAIL)'; then
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | fail — terminate" | tee -a "$LOG"
+  # Failures: sync logs, keep pod alive for hot-fix retry (bootstrap HOLD_*).
+  # Only terminate on S3_PERSIST_DONE (success) or explicit ABORTED_*.
+  if echo "$OUT" | grep -Eq 'STATUS=ABORTED_'; then
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | aborted — terminate" | tee -a "$LOG"
     # shellcheck disable=SC1091
     source /tmp/p51_aws_creds.env 2>/dev/null || true
     aws s3 sync "s3://gemma4-dev-agent-data-650825122703/results/p56_train_pipeline/" \
       "$LOCAL_OUT/" --region us-east-1 2>&1 | tee -a "$LOG" || true
     terminate_pod | tee -a "$LOG"
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | done | P5.6-dora-sft | agent=cursor | hash=none | metrics=fail=1,pod=${POD}_terminated,status=$(echo "$OUT" | sed -n 's/.*STATUS=//p' | head -1) | next=diagnose | blocker=train_fail" >> "$ROOT/docs/experiment_log.md"
-    exit 13
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | done | P5.6-dora-sft | agent=cursor | hash=none | metrics=aborted=1,pod=${POD}_terminated | next=manual | blocker=aborted" >> "$ROOT/docs/experiment_log.md"
+    exit 99
+  fi
+
+  if echo "$OUT" | grep -Eq 'STATUS=(SFT_FAIL|GRPO_FAIL|MERGE_FAIL|SERVE_CHECK_FAIL|GATE_FAIL|MODEL_SYNC_FAIL|PREFLIGHT_.*FAIL|HOLD_)'; then
+    FAIL_ST=$(echo "$OUT" | sed -n 's/.*STATUS=\([A-Z0-9_]*\).*/\1/p' | head -1)
+    # Dedup: note once per distinct fail/hold status
+    if [ "${LAST_FAIL_NOTE:-}" != "$FAIL_ST" ]; then
+      LAST_FAIL_NOTE="$FAIL_ST"
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | fail_keep_alive status=$FAIL_ST — NOT terminating (touch /workspace/p56_retry after fix)" | tee -a "$LOG"
+      # shellcheck disable=SC1091
+      source /tmp/p51_aws_creds.env 2>/dev/null || true
+      aws s3 sync "s3://gemma4-dev-agent-data-650825122703/results/p56_train_pipeline/" \
+        "$LOCAL_OUT/" --region us-east-1 2>&1 | tee -a "$LOG" || true
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | note | P5.6-dora-sft | agent=cursor | hash=none | metrics=fail_keep_alive=1,pod=$POD,status=$FAIL_ST,action=await_p56_retry | next=hot_fix | blocker=train_fail" >> "$ROOT/docs/experiment_log.md"
+    fi
+    # continue polling — do not exit
   fi
 
   if echo "$OUT" | grep -q 'STATUS=S3_PERSIST_DONE'; then

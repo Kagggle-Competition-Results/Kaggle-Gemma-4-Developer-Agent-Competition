@@ -305,7 +305,8 @@ def merge_from_adapters(cfg: dict[str, Any], adapter_dirs: list[Path], out_dir: 
         merged_flat = ties_merge(
             vecs, density=density, weights=weights, disjoint=bool(cfg["disjoint"])
         )
-        merged[key] = torch.tensor(merged_flat, dtype=tensors[0].dtype).reshape(shape)
+        # Ship bf16 adapters (~0.95GB) for G5 <3 GiB zip; training tensors were fp32.
+        merged[key] = torch.tensor(merged_flat, dtype=torch.bfloat16).reshape(shape)
         nnz_report[key] = {
             "n": len(merged_flat),
             "nnz": sum(1 for x in merged_flat if x != 0.0),
