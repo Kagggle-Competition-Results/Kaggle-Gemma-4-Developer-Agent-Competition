@@ -33,7 +33,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 # GATE_P3 = FAIL + pivot=scaffold_freeze (2026-10-08; edit KPIs unmet; ≥2 edit-prompt ablations hurt Pass@1)
 # GATE_P4 = PIVOT topology=single skipped=true (2026-10-08)
 # GATE_TRAIN_SHIP = PASS (2026-10-20; P5.6c LoRA-r64 SFT→GRPO→TIES→P5.7 max_seq=4864 edit=100%; pod gbox0i2vaitni4 TERMINATED; P6.1 smoke INVALID appledouble)
-# GATE_P6 = PASS (2026-10-20; p61b smoke Pass@1=0.30 vs 0.20; failed_edit=0; crashes=0; zip e2f72b49… unpacked=0.9123GiB; kaggle ref=57425395 PENDING)
+# GATE_P6 = PASS (2026-10-20; p61b smoke Pass@1=0.30 vs 0.20; failed_edit=0; crashes=0; zip e2f72b49… unpacked=0.9123GiB; kaggle ref=57425395 COMPLETE public=0.17 Δ=-0.01 vs 0.18)
 # CLOUD_APPROVAL = YES (P6.1b-clean-smoke-eval-v2-adapter; max_usd_per_hr=1.20; budget_usd_max=15; expires=2026-10-21T04:35:00Z)
 # S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
 # SCAFFOLD_FREEZE = zip_sha256=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 (agent/ 2026-10-08)
@@ -53,7 +53,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Smoke/dev kernel | **v24 COMPLETE** (P3.11 Pass@1=**0.40**) | `moranzavdi/gemma4-p26-smoke-swegemma` |
 | Official submit P2.7 | **ERROR** | ref `56892002`; sha `b92db00d…` |
 | Official submit P3.8 | **ERROR** | ref `56909388` |
-| Official submit | standing public **0.18** (`P3.14a` `57076074`) · **P6.2 v2 adapter `57425395` PENDING** · `P3.14b` **0.17 DISCARD** | zip `e2f72b49…`; smoke P6.1b **0.30** |
+| Official submit | standing public **0.18** (`P3.14a` `57076074`) · **P6.2 v2 adapter `57425395` COMPLETE 0.17** (Δ=**−0.01** vs baseline) · `P3.14b` **0.17 DISCARD** | zip `e2f72b49…`; smoke P6.1b **0.30** |
 | Paper notes | **updated 2026-10-20** | [`docs/paper-notes.md`](./paper-notes.md) · plan [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md) |
 | **Kept / FREEZE** | P3.2/P3.3 + graph-first + temp 0.0 + **max_time=4** | zip `105a5e88…`; `agent/` frozen (ship staged `p6_candidate_agent_v2`) |
 | P3 metrics | **DONE** local+S3 | `results/p3_metrics_batch/` |
@@ -63,7 +63,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Phase 6 | **DONE** / `GATE_P6=PASS` | P6.1b Pass@1=**0.30** `failed_edit=0.0`; submit `57425395`; P6.3 autopsy logged |
 | Harvest ops | **required reading** | [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md) · freeze agent only |
 | Model A/B | **P3.15a FAIL** | Pass@1=0.10 < 0.14; keep default **31B** |
-| Next | Watch LB **57425395**; v3 only if clear miss vs 0.18; do not chase smoke `loop_rate=0.8` (P6.3 artifact) | |
+| Next | LB **57425395=0.17** miss vs **0.18**; decide v3 vs hold; do not chase smoke `loop_rate=0.8` (P6.3 artifact) | |
 | **Wall reminder** | 4 min ≠ guaranteed &lt;12h | if LB timeout → next zip **3–3.5 min** (see paper-notes §4) |
 
 **Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call; edit-prompt churn; multi-agent P4; assume wall=4 alone finishes 120 tasks under 12h.
@@ -727,3 +727,4 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-20T09:12:03Z | claim | P6.6-sft-dedup-and-grpo-group-restore | agent=cursor | hash=none | metrics=no_cloud=1,sft_dedup=1,sprawl_prune=1,grpo_restore_caps=1,lb=57425395 | next=sft_cleanup+grpo_caps | blocker=none
 2026-10-20T09:16:09Z | note | P6.6-sft-dedup-and-grpo-group-restore | agent=cursor | hash=ffee0594ce8a943ed4eb0eab569a4269c2c42d4134f01ad0308a9ddaa2f97d65 | metrics=sft_rows=64,tasks=39,dups_dropped=7,sprawl_dropped=2,escapes=json_normal,sft_dry_pass=1,grpo_groups=17,max_edits_pos=8,max_patch_pos=4500,sprawl_excl=1,kaggle_57425395=PENDING | next=done | blocker=none
 2026-10-20T09:16:09Z | done | P6.6-sft-dedup-and-grpo-group-restore | agent=cursor | hash=ffee0594ce8a943ed4eb0eab569a4269c2c42d4134f01ad0308a9ddaa2f97d65 | metrics=sft_rows=64,sft_tasks=39,dups_dropped=7,sprawl_secondary_dropped=2,sft_final_winning_in_window_pct=100.0,sft_superseded_supervised=0,tool_response_leak=0,grpo_active_mixed=17,max_edits_positive=8,max_patch_chars_positive=4500,kaggle_ref=57425395,kaggle_status=PENDING,artifact=results/p56c_full_edit_pipeline/p66_sft_dedup_and_grpo_restore.json | next=watch_LB_57425395 | blocker=none
+2026-10-21T01:02:54Z | note | LB_watch_57425395 | agent=cursor | hash=none | metrics=kaggle_ref=57425395,status=COMPLETE,public_score=0.17,baseline_ref=57076074,baseline_score=0.18,delta_vs_018=-0.01,desc=P6.2_p314a_plus_v2_master_swe_adapter_bf16_smoke030_failedit0 | next=decide_v3_or_hold | blocker=none
