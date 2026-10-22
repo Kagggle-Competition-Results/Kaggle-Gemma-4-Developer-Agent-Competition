@@ -5,14 +5,17 @@
 # Plan B: skip merge; serve multiple r≤64 adapters via vLLM LoRA.
 
 method: ties  # Plan A
+# P6.7 v3 low-drift: denser trim (keep less magnitude) vs v2 density=0.2 — reduces
+# post-merge logit shift after surgical SFT+GRPO (target mean_abs_logit_delta 0.15–0.30).
 # DARE-style magnitude trim density (keep top fraction by |delta|); ablate rest.
-density: 0.2
+density: 0.15
 # Optional per-adapter weights (same order as --adapters / adapters:). Empty → uniform.
 weights: []
 # Sign consensus: majority vote across adapters for each parameter.
 sign_consensus: majority
 # Drop parameters whose elected sign disagrees with an adapter's sign (disjoint merge).
 disjoint: true
+# P6.7: after merge, re-run P5.7 serve-check; reject ship if mean_abs_logit_delta > 0.30.
 
 base_model: gemma-4-31b-it-qat-w4a16-ct
 # Empty → $MODEL_PATH / /models/gemma-4-31B-it-qat-w4a16-ct

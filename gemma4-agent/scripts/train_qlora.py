@@ -815,9 +815,17 @@ def build_sft_windows(
                 return True
         return False
 
-    # mid_edit thrashing windows only when explicitly enabled AND under the cap.
-    if multi_window and allow_mid_edit_windows and len(windows) < max_windows:
-        for ed in edits:
+    # mid_edit windows: cover edits missed by head+tail. When enabled, drop the
+    # head window first so remaining slots (under max_windows_per_row) go to
+    # mid_edit coverage while keeping tail for final-winning edits.
+    if multi_window and allow_mid_edit_windows:
+        windows = [w for w in windows if w.get("kind") != "head"]
+        uncovered = [
+            ed
+            for ed in edits
+            if not covered_by_existing(int(ed["start"]), int(ed["end"]))
+        ]
+        for ed in uncovered:
             if len(windows) >= max_windows:
                 break
             es, ee = int(ed["start"]), int(ed["end"])
@@ -843,6 +851,9 @@ def build_sft_windows(
                 w_ids = ids[force_start:ee][:max_seq]
                 w_lab = labels[force_start:ee][:max_seq]
                 abs_ranges = [(force_start, force_start + len(w_ids))]
+            # Skip useless mid windows that still don't cover the target edit.
+            if not _window_covers_edit(abs_ranges, es, ee):
+                continue
             windows.append(
                 {
                     "input_ids": w_ids,
@@ -1213,13 +1224,29 @@ def dry_run(cfg: dict[str, Any], data_path: Path) -> dict[str, Any]:
             for k, v in sorted(source_role_chars.items())
         },
         "mask_audit_samples": audit_samples,
-        "pass": n_ok == len(rows)
-        and not mask_issues
-        and leak_tool_response_tokens == 0
-        and final_in_pct >= 100.0
-        and superseded_supervised == 0
-        and n_mid_edit_windows == 0
-        and (not window_lens or max(window_lens) <= max_seq),
+        # P6.5 default: no mid-edit windows + no supervised superseded tokens.
+        # P6.10 strict_le3 (allow_mid_edit_windows=true, mask_superseded=false):
+        # require full edit_in_window coverage; mid windows and unmasked
+        # precursor edits in already-clean ≤3-edit histories are expected.
+        "pass": (
+            n_ok == len(rows)
+            and not mask_issues
+            and leak_tool_response_tokens == 0
+            and (not window_lens or max(window_lens) <= max_seq)
+            and (
+                (
+                    allow_mid
+                    and edit_in_pct >= 100.0
+                    and final_in_pct >= 100.0
+                )
+                or (
+                    (not allow_mid)
+                    and final_in_pct >= 100.0
+                    and superseded_supervised == 0
+                    and n_mid_edit_windows == 0
+                )
+            )
+        ),
         "per_row": per_row,
         "adapter_plan": {
             "plan_a": "merge_adapters.py TIES → agent/adapters/master_swe_adapter after P5.7",

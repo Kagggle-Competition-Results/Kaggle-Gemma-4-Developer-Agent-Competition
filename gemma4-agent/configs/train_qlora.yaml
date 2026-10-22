@@ -8,10 +8,12 @@ base_model: gemma-4-31b-it-qat-w4a16-ct
 # Empty → $MODEL_PATH, else /models/gemma-4-31B-it-qat-w4a16-ct
 model_path: ""
 
-# peft_type: dora (preferred) | lora; rank ∈ {32,64}; α=2r
+# peft_type: dora (preferred) | lora; rank ∈ {32,64}.
+# P6.7 v3 low-drift: α/r=1.0 (was 2.0) to target mean_abs_logit_delta ∈ [0.15, 0.30]
+# (v2 @ α=128 / lr=2e-4 / 2ep measured 0.7539 and LB 0.17 DISCARD).
 peft_type: dora
 rank: 64
-lora_alpha: 128
+lora_alpha: 64
 lora_dropout: 0.05
 
 # Targets: attn + MLP (Gemma projected modules)
@@ -24,10 +26,10 @@ target_modules:
   - up_proj
   - down_proj
 
-learning_rate: 2.0e-4
+learning_rate: 1.0e-4
 lr_scheduler_type: cosine
-# ≥2 epochs over head+tail windows (P6.5: no mid_edit thrash; ≤2 windows/row).
-# With ≤146 windows, grad_accum=8 → ~36 optimizer steps.
+# P6.7 v3: surgical head+tail only (P6.6: ≤2 windows/row, mid_edit=0).
+# ~119 windows / grad_accum=8 × 2 epochs → ~28 opt steps (target band 17–34; v2 ~70–72).
 num_train_epochs: 2
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 8

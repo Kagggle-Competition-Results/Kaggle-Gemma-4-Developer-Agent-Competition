@@ -4,9 +4,9 @@
 
 **Competition:** [gemma-4-developer-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent) · Paper: [gemma-4-developer-agent-paper](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper)
 
-**Last updated:** 2026-10-20 (P6.3 autopsy; `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS`; P6.1b smoke **0.30**; Kaggle **57425395** PENDING)
+**Last updated:** 2026-10-22 (P6.7; LB **57425395=0.17 DISCARD**; standing freeze **0.18**; surgical low-drift v3 config on CPU)
 
-**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS` · public baseline **0.18** · P6.1b smoke **0.30** (`failed_edit=0.0`) · wall **4** · v2 `master_swe_adapter` bf16 · submit **57425395** PENDING · P3.15a 12B FAIL · **no cloud for P6.3**.
+**Stand:** GATE_P2 PASS · GATE_P3 FAIL+**PIVOT** · GATE_P4 **PIVOT** single · `GATE_TRAIN_SHIP=PASS` · `GATE_P6=PASS` · **standing public 0.18** (`P3.14a` `57076074`) · P6.1b smoke **0.30** did **not** transfer · v2 adapter **57425395 COMPLETE 0.17 DISCARD** (Δ=−0.01) · wall **4** · P6.5/P6.6 surgical SFT ready · v3 low-drift cfg (`α=64`, `lr=1e-4`, `β=0.08`) dry-run PASS · **no cloud until fresh CLOUD_APPROVAL**.
 
 **Plan doc:** [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md)
 
@@ -61,7 +61,9 @@
 | P3.8b | `max_time_minutes` **4 → 3.5** | Kaggle v23 | **0.10** | 1/10 | **no** | −0.10; 3× session timeout; **revert wall to 4** |
 | P3.11 | smoke **reshuffle** seed=42 (8/10 new IDs) | Kaggle v24 | **0.40** | 4/10 | **yes (stability)** | +0.20 vs orig smoke; **all 4 passes on new IDs**; overlap `rich_3480`/`rich_3930` fail; failed_edit=0.45; bad_arg=0 |
 | P3.12 | **force** edit-by-12 (prompt/skill; no schema) | RunPod A6000 | **0.00** | 0/10 | **no** | −0.20 vs P3.8; failed_edit=0.83; bad_arg=0.62; no_edit 4/10 still rg-past-12; **revert** |
-| P6.1b | freeze scaffold + v2 TIES `master_swe_adapter` (bf16 r64, Plan B `--enable-lora`) | RunPod A40 | **0.30** | 3/10 | **yes (ship)** | +0.10 vs P2.6/P3.8; passes `rich_3882`+`rich_3905`+`rich_3480`; `failed_edit=0.0`; `loop_rate=0.8` mostly smoke-regex artifact (P6.3); zip→Kaggle `57425395` |
+| P6.1b | freeze scaffold + v2 TIES `master_swe_adapter` (bf16 r64, Plan B `--enable-lora`) | RunPod A40 | **0.30** | 3/10 | smoke-only | +0.10 vs P2.6/P3.8 on smoke; `failed_edit=0.0`; zip→Kaggle `57425395` |
+| P6.2 LB | same v2 adapter ship | Kaggle | **0.17** | — | **DISCARD** | public **0.17** vs freeze **0.18** (Δ=−0.01); keep standing `57076074`; do not re-ship |
+| P6.7 | surgical low-drift v3 **config only** (CPU dry-run; no GPU) | local | n/a | n/a | plan | α=64 lr=1e-4 β=0.08; 64/39 SFT; 17 GRPO groups; hold 0.18 unless CLOUD_APPROVAL for ~$2 / 90min v3 |
 
 ### Per-task highlights (kept vs rejected)
 
@@ -83,7 +85,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | community_budget_fit | 240 | 28 | 8 | 80 | 0.00 | **5.83** (mean wall) |
 | baseline (pre-P3.8) | 300 | 60 | 5 | 80 | 0.10–0.20 | not remeasured on Kaggle wall |
-| **P3.8 wall-4min (shipped)** | 300 | 60 | **4** | 80 | **0.20** | keep; LB still PENDING; extrap TBD from mean wall |
+| **P3.8 wall-4min (shipped / standing 0.18)** | 300 | 60 | **4** | 80 | **0.20** | keep; P6.1b mean_s=343.9 → extrap **11.46h/120** (marginal vs 12h; sprawl fails dominate) |
 
 **Host implication:** `5 min × 120 ≈ 10h` agent time alone + load/overhead → easy to approach/exceed **12h** official scoring. First public submit (P2.7, 2026-10-06) still `PENDING` after ~12–15h — likely wall overrun and/or scorer backlog; treat long PENDING as a **throughput** signal, not only model quality.
 

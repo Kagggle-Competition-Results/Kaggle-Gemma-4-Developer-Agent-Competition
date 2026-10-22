@@ -9,7 +9,8 @@ model_path: ""
 
 peft_type: dora
 rank: 64
-lora_alpha: 128
+# P6.7 v3 low-drift: match SFT α/r=1.0 (v2 used 128 → over-shift).
+lora_alpha: 64
 lora_dropout: 0.05
 target_modules:
   - q_proj
@@ -22,6 +23,8 @@ target_modules:
 
 learning_rate: 1.0e-5
 lr_scheduler_type: cosine
+# P6.7: 1 epoch; ~17 mixed groups × G≈4 / grad_accum=4 → ~40–45 opt steps
+# (v2 ran 162 GRPO steps — too much drift vs freeze 0.18).
 num_train_epochs: 1
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 4
@@ -41,8 +44,8 @@ attn_implementation: sdpa
 
 # GRPO group size G (spec default 4–8 local)
 group_size: 4
-# KL coefficient toward reference / SFT policy
-beta: 0.04
+# P6.7 v3: stronger KL anchor to SFT/ref (was 0.04) for logit delta ∈ [0.15, 0.30].
+beta: 0.08
 seed: 42
 
 # Mixed-polarity filter (P5.3d/P5.2c):

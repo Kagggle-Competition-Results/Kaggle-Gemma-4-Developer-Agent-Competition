@@ -1,0 +1,50 @@
+# P6.9 strict le3 SFT — mask_superseded_edits=false (histories already clean).
+base_model: gemma-4-31b-it-qat-w4a16-ct
+model_path: ''
+peft_type: dora
+rank: 64
+lora_dropout: 0.05
+target_modules:
+- q_proj
+- k_proj
+- v_proj
+- o_proj
+- gate_proj
+- up_proj
+- down_proj
+# P6.10: ultra-low-drift surgical SFT-only (~12 steps). No GRPO.
+lora_alpha: 32
+learning_rate: 5.0e-5
+lr_scheduler_type: cosine
+num_train_epochs: 1
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+warmup_ratio: 0.03
+weight_decay: 0.0
+max_grad_norm: 1.0
+logging_steps: 1
+save_steps: 50
+seed: 42
+max_seq_length: 4864
+windowing: turn_aligned_head_tail
+# Histories already n_mutating<=3; cover mid-edit spans for 100% edit_in_window.
+mask_superseded_edits: false
+# Ticket suggested 3; measured need is 4 (tail+3 mid) for edit_in_window_pct=100 on 2 residual rows.
+max_windows_per_row: 4
+allow_mid_edit_windows: true
+adapter_save_dtype: bfloat16
+ce_loss_chunk_size: 128
+optim: adamw_8bit
+assistant_only_loss: true
+gradient_checkpointing: true
+gradient_checkpointing_use_reentrant: false
+bf16: true
+attn_implementation: sdpa
+load_in_4bit: true
+bnb_4bit_compute_dtype: bfloat16
+bnb_4bit_quant_type: nf4
+bnb_4bit_use_double_quant: true
+adapter_serve_note: "Plan A (preferred): after P5.7 4-bit serve-check, merge DoRA\u2192\
+  base with scripts/merge_adapters.py (configs/merge_ties.yaml) into agent/adapters/master_swe_adapter.\
+  \ Plan B: keep adapter folder and load via vLLM LoRA alongside gemma-4-31b-it-qat-w4a16-ct.\n"
+notes_p610: 'Strict le3 SFT: alpha=32 lr=5e-5 epochs=1 mid_edit_windows=true max_windows=3; mask_superseded=false.'

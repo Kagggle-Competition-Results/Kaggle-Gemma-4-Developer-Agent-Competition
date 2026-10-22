@@ -88,18 +88,84 @@ def _extract_commands_from_json_text(blob: str) -> list[str]:
     return cmds
 
 
+def _extract_structured_tool_names(obj: object) -> list[str]:
+    """Collect tool/function names from structured ADK/SWE traces (not free-text)."""
+    names: list[str] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            # Common shapes: {name}, {function_name}, {tool_name}, {function:{name}}, {tool_calls:[{name}]}
+            for key in ("function_name", "tool_name"):
+                v = node.get(key)
+                if isinstance(v, str) and v.strip():
+                    names.append(v.strip())
+            n = node.get("name")
+            if isinstance(n, str) and n.strip():
+                # Only treat as a tool name when sibling args / tool_call context present,
+                # or when name is a known host tool (avoids counting unrelated "name" fields).
+                known = {
+                    "edit_file",
+                    "write_file",
+                    "submit_patch",
+                    "run_command",
+                    "read_file",
+                    "get_status",
+                    "search_replace",
+                    "list_dir",
+                    "grep",
+                    "bash",
+                    "shell",
+                    "execute",
+                }
+                if n in known or "arguments" in node or "args" in node or node.get("type") in {
+                    "function_call",
+                    "tool_call",
+                    "functionCall",
+                }:
+                    names.append(n.strip())
+            fn = node.get("function") or node.get("functionCall") or node.get("function_call")
+            if isinstance(fn, dict):
+                fn_name = fn.get("name")
+                if isinstance(fn_name, str) and fn_name.strip():
+                    names.append(fn_name.strip())
+            tcs = node.get("tool_calls")
+            if isinstance(tcs, list):
+                for tc in tcs:
+                    walk(tc)
+            for v in node.values():
+                if v is tcs:
+                    continue
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(obj)
+    return names
+
+
 def _trace_kpis(results_dir: Path, task_id: str) -> dict:
     """Best-effort failed_edit / loop signals from per-task traces.
 
     loop_pairs = # of distinct full shell command strings that appear >=3 times.
     Prefer structured JSON traces so quoted grep patterns are not truncated at `"`.
+
+    P6.10: n_edit_calls / n_submit / n_tool_calls count structured assistant tool
+    invocations only (edit_file|write_file etc. in JSON tool_call objects) — NOT
+    raw substring matches across logs (which inflated KPIs ~3× in P6.8).
     """
     from collections import Counter
 
-    out = {"n_edit_calls": 0, "n_submit": 0, "n_tool_calls": 0, "loop_pairs": 0}
+    out = {
+        "n_edit_calls": 0,
+        "n_submit": 0,
+        "n_tool_calls": 0,
+        "loop_pairs": 0,
+        "kpi_mode": "structured_tool_calls",
+    }
     candidates = list(results_dir.rglob(f"*{task_id}*"))
     commands: list[str] = []
-    text_blobs: list[str] = []
+    tool_names: list[str] = []
     for p in candidates[:20]:
         if not p.is_file() or p.suffix not in {".json", ".jsonl", ".log", ".txt"}:
             continue
@@ -107,27 +173,33 @@ def _trace_kpis(results_dir: Path, task_id: str) -> dict:
             text = p.read_text(errors="ignore")[:200000]
         except OSError:
             continue
-        text_blobs.append(text)
         if p.suffix == ".json":
             try:
-                commands.extend(_extract_commands_from_trace_obj(json.loads(text)))
+                obj = json.loads(text)
             except json.JSONDecodeError:
                 commands.extend(_extract_commands_from_json_text(text))
+            else:
+                commands.extend(_extract_commands_from_trace_obj(obj))
+                tool_names.extend(_extract_structured_tool_names(obj))
         elif p.suffix == ".jsonl":
             for line in text.splitlines():
                 if not line.strip():
                     continue
                 try:
-                    commands.extend(_extract_commands_from_trace_obj(json.loads(line)))
+                    obj = json.loads(line)
                 except json.JSONDecodeError:
                     commands.extend(_extract_commands_from_json_text(line))
+                else:
+                    commands.extend(_extract_commands_from_trace_obj(obj))
+                    tool_names.extend(_extract_structured_tool_names(obj))
         else:
+            # logs: still extract shell commands for loop_pairs; do NOT regex-count edits
             commands.extend(_extract_commands_from_json_text(text))
 
-    blob = "\n".join(text_blobs)
-    out["n_edit_calls"] = len(re.findall(r"edit_file|write_file", blob))
-    out["n_submit"] = len(re.findall(r"submit_patch", blob))
-    out["n_tool_calls"] = len(re.findall(r"tool_call|\"name\":\s*\"", blob))
+    mutating = {"edit_file", "write_file"}
+    out["n_edit_calls"] = sum(1 for n in tool_names if n in mutating)
+    out["n_submit"] = sum(1 for n in tool_names if n == "submit_patch")
+    out["n_tool_calls"] = len(tool_names)
     if commands:
         c = Counter(commands)
         out["loop_pairs"] = sum(1 for _, n in c.items() if n >= 3)

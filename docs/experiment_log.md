@@ -33,8 +33,8 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 # GATE_P3 = FAIL + pivot=scaffold_freeze (2026-10-08; edit KPIs unmet; ≥2 edit-prompt ablations hurt Pass@1)
 # GATE_P4 = PIVOT topology=single skipped=true (2026-10-08)
 # GATE_TRAIN_SHIP = PASS (2026-10-20; P5.6c LoRA-r64 SFT→GRPO→TIES→P5.7 max_seq=4864 edit=100%; pod gbox0i2vaitni4 TERMINATED; P6.1 smoke INVALID appledouble)
-# GATE_P6 = PASS (2026-10-20; p61b smoke Pass@1=0.30 vs 0.20; failed_edit=0; crashes=0; zip e2f72b49… unpacked=0.9123GiB; kaggle ref=57425395 COMPLETE public=0.17 Δ=-0.01 vs 0.18)
-# CLOUD_APPROVAL = YES (P6.1b-clean-smoke-eval-v2-adapter; max_usd_per_hr=1.20; budget_usd_max=15; expires=2026-10-21T04:35:00Z)
+# GATE_P6 = PASS (2026-10-20; p61b smoke Pass@1=0.30 vs 0.20; failed_edit=0; crashes=0; zip e2f72b49…; kaggle 57425395 COMPLETE 0.17 DISCARD; standing 0.18 freeze)
+# CLOUD_APPROVAL = YES (P6.8-v3-surgical-low-drift-retrain-and-gate; max_usd_per_hr=1.50; budget_usd_max=10; expires=2026-10-24T14:40:00Z)
 # S3_BACKUP = model + competition/full + soundness.csv on s3://gemma4-dev-agent-data-650825122703
 # SCAFFOLD_FREEZE = zip_sha256=105a5e884a0fb851e463fa28c13d6752dc420240342d94d4338b94550c4ac601 (agent/ 2026-10-08)
 ```
@@ -48,12 +48,12 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Phase 3 | **DONE / PIVOT** / `GATE_P3=FAIL+scaffold_freeze` | freeze kept; unlock P5; no more edit-prompt A/Bs |
 | Harness verify | **2026-10-06.5** | `gemma4-agent/docs/harness_verify.md` + `sandbox/` |
 | Soundness CSV | on S3 | `s3://…/results/soundness.csv` |
-| RunPod / EC2 | **idle** (P6.3 local CPU) | last train/smoke pods terminated; no new cloud without `CLOUD_APPROVAL` |
+| RunPod / EC2 | **P6.8 v3 surgical ACTIVE** | `CLOUD_APPROVAL` YES until 2026-10-24; meta `/tmp/p68_v3_ssh.json` |
 | Harness packages | **Kaggle wheelhouse** (not PyPI) | `metric/gemma-4-developer-agent-wheelhouse` |
 | Smoke/dev kernel | **v24 COMPLETE** (P3.11 Pass@1=**0.40**) | `moranzavdi/gemma4-p26-smoke-swegemma` |
 | Official submit P2.7 | **ERROR** | ref `56892002`; sha `b92db00d…` |
 | Official submit P3.8 | **ERROR** | ref `56909388` |
-| Official submit | standing public **0.18** (`P3.14a` `57076074`) · **P6.2 v2 adapter `57425395` COMPLETE 0.17** (Δ=**−0.01** vs baseline) · `P3.14b` **0.17 DISCARD** | zip `e2f72b49…`; smoke P6.1b **0.30** |
+| Official submit | standing public **0.18** (`P3.14a` `57076074` / freeze) · **`57425395` = 0.17 DISCARD** (Δ=**−0.01**; do not re-ship) · `P3.14b` **0.17 DISCARD** | freeze zip `6f21a019…`; smoke 0.30 ≠ LB |
 | Paper notes | **updated 2026-10-20** | [`docs/paper-notes.md`](./paper-notes.md) · plan [`scaffold-freeze-train-plan.md`](./scaffold-freeze-train-plan.md) |
 | **Kept / FREEZE** | P3.2/P3.3 + graph-first + temp 0.0 + **max_time=4** | zip `105a5e88…`; `agent/` frozen (ship staged `p6_candidate_agent_v2`) |
 | P3 metrics | **DONE** local+S3 | `results/p3_metrics_batch/` |
@@ -63,7 +63,7 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 | Phase 6 | **DONE** / `GATE_P6=PASS` | P6.1b Pass@1=**0.30** `failed_edit=0.0`; submit `57425395`; P6.3 autopsy logged |
 | Harvest ops | **required reading** | [`gemma4-agent/docs/harvest_runpod.md`](../gemma4-agent/docs/harvest_runpod.md) · freeze agent only |
 | Model A/B | **P3.15a FAIL** | Pass@1=0.10 < 0.14; keep default **31B** |
-| Next | LB **57425395=0.17** miss vs **0.18**; decide v3 vs hold; do not chase smoke `loop_rate=0.8` (P6.3 artifact) | |
+| Next | **P6.8 v3 surgical** running (hard gate before any LB; Kaggle weekly quota out → zip-only if gate PASS) | |
 | **Wall reminder** | 4 min ≠ guaranteed &lt;12h | if LB timeout → next zip **3–3.5 min** (see paper-notes §4) |
 
 **Do not:** start cloud without live `CLOUD_APPROVAL`; peek holdout; ship community 28-call; edit-prompt churn; multi-agent P4; assume wall=4 alone finishes 120 tasks under 12h.
@@ -728,3 +728,18 @@ YYYY-MM-DDThh:mm:ssZ | cloud | CLOUD_APPROVAL | agent=operator | hash=none | met
 2026-10-20T09:16:09Z | note | P6.6-sft-dedup-and-grpo-group-restore | agent=cursor | hash=ffee0594ce8a943ed4eb0eab569a4269c2c42d4134f01ad0308a9ddaa2f97d65 | metrics=sft_rows=64,tasks=39,dups_dropped=7,sprawl_dropped=2,escapes=json_normal,sft_dry_pass=1,grpo_groups=17,max_edits_pos=8,max_patch_pos=4500,sprawl_excl=1,kaggle_57425395=PENDING | next=done | blocker=none
 2026-10-20T09:16:09Z | done | P6.6-sft-dedup-and-grpo-group-restore | agent=cursor | hash=ffee0594ce8a943ed4eb0eab569a4269c2c42d4134f01ad0308a9ddaa2f97d65 | metrics=sft_rows=64,sft_tasks=39,dups_dropped=7,sprawl_secondary_dropped=2,sft_final_winning_in_window_pct=100.0,sft_superseded_supervised=0,tool_response_leak=0,grpo_active_mixed=17,max_edits_positive=8,max_patch_chars_positive=4500,kaggle_ref=57425395,kaggle_status=PENDING,artifact=results/p56c_full_edit_pipeline/p66_sft_dedup_and_grpo_restore.json | next=watch_LB_57425395 | blocker=none
 2026-10-21T01:02:54Z | note | LB_watch_57425395 | agent=cursor | hash=none | metrics=kaggle_ref=57425395,status=COMPLETE,public_score=0.17,baseline_ref=57076074,baseline_score=0.18,delta_vs_018=-0.01,desc=P6.2_p314a_plus_v2_master_swe_adapter_bf16_smoke030_failedit0 | next=decide_v3_or_hold | blocker=none
+2026-10-22T14:27:54Z | claim | P6.7-log-017-and-v3-spec | agent=cursor | hash=none | metrics=no_cloud=1,discard_v2_017=1,verify_freeze_018=1,v3_low_drift_spec=1 | next=verify_freeze+postmortem+v3_cfg | blocker=none
+2026-10-22T14:35:18Z | note | P6.7-log-017-and-v3-spec | agent=cursor | hash=ae41065dc9bd493c72844b66004c43c7db7710c468836d0ffb1760c7e74590dc | metrics=kaggle_ref=57425395,status=COMPLETE,public_score=0.17,delta_vs_018=-0.01,decision=DISCARD_v2_adapter_keep_standing_018_freeze,freeze_zip=6f21a019,agent_adapters=0,v3_alpha=64,v3_lr=1e-4,v3_beta=0.08,sft_dry_pass=1,sft_steps=29,grpo_groups=17,logit_delta_target=0.15-0.30,mean_s=343.9,extrap_h120=11.46 | next=done | blocker=none
+2026-10-22T14:35:18Z | done | P6.7-log-017-and-v3-spec | agent=cursor | hash=ae41065dc9bd493c72844b66004c43c7db7710c468836d0ffb1760c7e74590dc | metrics=discard_v2_017=1,standing_018=1,freeze_intact=1,sft_dry_pass=1,grpo_dry_pass=1,sft_rows=64,sft_tasks=39,sft_windows=119,sft_steps=29,grpo_groups=17,final_winning_in_window_pct=100.0,superseded_supervised=0,option1_hold_018=recommended,option2_v3_est_usd=2,option2_est_min=90,artifact=results/p56c_full_edit_pipeline/p67_lb017_postmortem_and_v3_plan.json | next=hold_018_or_CLOUD_APPROVAL_for_v3 | blocker=none
+2026-10-22T14:40:00Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=10,max_usd_per_hr=1.50,provider=runpod,purpose=P6.8-v3-surgical-low-drift-retrain-and-gate,sku_hint=L40S_or_RTX_6000_Ada_or_A40,expires=2026-10-24T14:40:00Z | next=P6.8-train-v3-surgical-and-gate | blocker=none
+2026-10-22T14:38:16Z | claim | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=budget_usd_max=10,max_usd_per_hr=1.50,no_kaggle_quota=1,hard_gate=1,standing_018_safe=1 | next=provision+sft+grpo+ties+smoke_gate | blocker=none
+2026-10-22T15:05:16Z | note | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=pod=f84ergsa54t7by,sku=PRO6000_MIG_2g.48gb,cost_per_hr=1.29,host=69.8.146.165:11176,s3=results/p68_v3_surgical,kaggle_quota=0 | next=watch_SFT_GRPO_smoke_gate | blocker=none
+2026-10-22T17:23:11Z | note | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=fail_keep_alive=1,pod=f84ergsa54t7by,status=GRPO_FAIL,action=await_p56c_retry | next=hot_fix | blocker=train_fail
+2026-10-22T17:33:13Z | note | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=sft_done=1,sft_steps=30,sft_loss_end=0.2953,peak_vram_gb=34.8,grpo_fail1=missing_traces_tgz_name_mismatch_p68_vs_p56c,hot_fix_resume=1,pod_died_mid_grpo=f84ergsa54t7by,s3_sft_ok=1,reprovision=INSUFFICIENT_BALANCE,client_balance_usd=-0.086,live_pods=0,kaggle_quota=0 | next=operator_topup_runpod_then_resume_grpo | blocker=runpod_balance_negative
+2026-10-22T18:04:53Z | note | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=resume_pod=gojehuyi994ohs,sku=RTX_6000_Ada,cloud=SECURE,cost_per_hr=0.99,skip_sft=1,balance_ok=1 | next=watch_GRPO_merge_smoke_gate | blocker=none
+2026-10-22T20:12:24Z | done | P6.8-train-v3-surgical-and-gate | agent=cursor | hash=none | metrics=DECISION=HOLD_0.18,pass_at_1=0.20,resolved=2/10,failed_edit=0.0,mean_s=258.85,extrap_h120=8.63,logit_delta=0.340,grpo_steps=46,gate_c1=FAIL,gate_c2=FAIL_sprawl_14609_20edits_22963chars,gate_c3=PASS,gate_c4=PASS,kaggle_submit=0,pod=gojehuyi994ohs_terminated,cost_per_hr=0.99,artifact=results/p68_v3_surgical/p68_v3_report.json | next=hold_standing_018 | blocker=none
+2026-10-22T20:41:58Z | claim | P6.9-diagnose-sprawl-and-strict-filter | agent=cursor | hash=none | metrics=no_cloud=1,g4_smoke_only=1,diagnose_p68_sprawl=1,strict_le3_sft=1 | next=trace_audit+strict_filter | blocker=none
+2026-10-22T20:48:03Z | done | P6.9-diagnose-sprawl-and-strict-filter | agent=cursor | hash=7f1808c437f40247 | metrics=no_cloud=1,strict_rows=30,strict_tasks=22,mask_superseded=0,dry_pass=0,final_winning_in_window_pct=100.0,edit_in_window_pct=64.58,kpi_inflation=1,fastapi_13786_ui_edits=11_kpi=35,rich_3480_v2_pass_v3_fail_old_string_thrash=1,artifact=results/p68_v3_surgical/p69_sprawl_root_cause_and_strict_sft.json | next=HOLD_0.18_or_decide_strict_sft_only | blocker=none
+2026-10-22T21:00:00Z | cloud | CLOUD_APPROVAL | agent=operator | hash=none | metrics=budget_usd_max=15,max_usd_per_hr=0.40,provider=runpod_or_kaggle,purpose=P6.10-frontier-024-audit-and-strict-sft-eval,sku_hint=RunPod_le_0.40_or_Kaggle_L4x4_free,expires=2026-10-25T21:00:00Z | next=P6.10-frontier-024-audit-and-strict-leader | blocker=none
+2026-10-22T20:56:39Z | claim | P6.10-frontier-024-audit-and-strict-leader | agent=cursor | hash=none | metrics=budget_usd_max=15,max_usd_per_hr=0.40,g4_smoke_only=1,frontier_024_diff=1,fix_trace_kpis=1,strict_le3_dry=1 | next=pull_frontier+diff+kpi_fix | blocker=none
+2026-10-22T21:12:39Z | done | P6.10-frontier-024-audit-and-strict-leader | agent=cursor | hash=d017b609c0ceb65444ab8ee1cced624fd1da836f5f70efe8ae2b95e60e0e5aa1 | metrics=frontier_024_diff=1,agent_024_base=1,submission_024_base_zip=1,appledouble=0,check_pass=1,DRY_RUN_PASS=1,edit_in_window_pct=100.0,tool_response_leak=0,kpi_structured_fix=1,v2_edit_inflation=2.286,cloud_gpu_train=0,pod_dns_fail=1,listed_a6000_usd_per_hr=0.33,listed_a40_usd_per_hr=0.35,cap_usd_per_hr=0.40,p314a_zip_untouched=1,report=gemma4-agent/results/p610_frontier_leader/p610_report.json | next=kaggle_submit_024_base_xor_kaggle_L4x4_smoke_xor_runpod_le_0.40_strict_sft | blocker=none
